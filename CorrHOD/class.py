@@ -123,7 +123,8 @@ class CorrHOD():
     
     # TODO : Autocorrelation and cross-correlation of the quantiles
     
-    # TODO : Save all the results somewhere ??
+    def save(self, path:str):
+        pass
     
     # TODO : Option for the HOD parameters to be a dictionary or a list of dictionaries (for the MCMC)
     
