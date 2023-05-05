@@ -9,6 +9,7 @@ def apply_rsd(data, boxsize, redshift, cosmo, tracer='LRG', los = 'z'):
     except:
         print('The object is not a hod_dict. Trying to load it as a positional dataset.')
         # TODO : Check that the data contains the right keys
+        # TODO : Transform the print into a warning
         
     az = 1 / (1 + redshift)
     hubble = 100 * cosmo.efunc(redshift)
