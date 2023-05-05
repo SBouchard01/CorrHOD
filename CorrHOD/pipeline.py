@@ -342,17 +342,9 @@ class CorrHOD():
         if return_density:
             return self.density, self.quantiles
         
-        return self.quantiles
-    
-    
-    
-    
-    # TODO : Option for the HOD parameters to be a dictionary or a list of dictionaries (for the MCMC)
-    # Not a good idea ?
-    
-    
-    
-    # TODO : 2PCF, autocorrelation and cross-correlation of the quantiles
+        return self.quantiles    
+
+
     
     def compute_auto_corr(self,
                           quantile:int,
@@ -627,6 +619,8 @@ class CorrHOD():
     
     # TODO : Handle MPI
     
+    # TODO : Option for the HOD parameters to be a dictionary or a list of dictionaries (for the MCMC)
+    # Not a good idea ?
     
     
 # Utils and scripts outside the class
