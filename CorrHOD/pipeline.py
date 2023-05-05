@@ -277,7 +277,7 @@ class CorrHOD():
             The positions of the galaxies after RSD. It is a (N,3) array.
         """
         # Get the positions of the galaxies
-        self.data_positions = np.c_([apply_rsd(self.cubic_dict, self.boxsize, self.redshift, self.cosmo, tracer=self.tracer, los=self.los)])
+        self.data_positions = np.c_[apply_rsd(self.cubic_dict, self.boxsize, self.redshift, self.cosmo, tracer=self.tracer, los=self.los)]
         
         return self.data_positions
     
