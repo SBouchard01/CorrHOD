@@ -1,4 +1,5 @@
 
+from warnings import warn
 
 def apply_rsd(data, boxsize, redshift, cosmo, tracer='LRG', los = 'z'):
     """Read positions and velocities from HOD dict and applies Redshift-Space Distortions (RSD).
@@ -33,10 +34,13 @@ def apply_rsd(data, boxsize, redshift, cosmo, tracer='LRG', los = 'z'):
     try:
         data = data[tracer] # Load the LRG data
     except:
-        print('The object is not a hod_dict. Trying to load it as a positional dataset.')
-        # TODO : Check that the data contains the right keys
-        # TODO : Transform the print into a warning
+        warn('The object is not a hod_dict. Trying to load it as a positional dataset.', TypeError)
         
+        # Check that the data contains the right keys
+        if not all([key in data.keys() for key in ['x', 'y', 'z', 'vx', 'vy', 'vz']]):
+            raise ValueError('The object is not a hod_dict and does not contain the keys "x", "y", "z", "vx", "vy", "vz"')
+        
+    # Get the scale factor and Hubble parameter at the redshift of the snapshot
     az = 1 / (1 + redshift)
     hubble = 100 * cosmo.efunc(redshift)
     
