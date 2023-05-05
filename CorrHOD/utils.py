@@ -1,8 +1,34 @@
 
 
 def apply_rsd(data, boxsize, redshift, cosmo, tracer='LRG', los = 'z'):
-    """Read positions and velocities from HOD dict
-    return real and redshift-space galaxy positions."""
+    """Read positions and velocities from HOD dict and applies Redshift-Space Distortions (RSD).
+    
+    Parameters
+    ----------
+    data : dict
+        HOD dict containing the positions and velocities of the tracer (data[tracer])
+        It can also be a positional dataset, in which case it must contain the keys 'x', 'y', 'z', 'vx', 'vy', 'vz'
+        
+    boxsize : float
+        Size of the simulation box in Mpc/h.
+        
+    redshift : float
+        Redshift of the simulation snapshot.
+        
+    cosmo : cosmology object (cosmoprimo)
+        Cosmology used for the simulation. It must contain an `efunc(z)` method.
+        
+    tracer : str, optional
+        Tracer to use. Default is 'LRG'.
+        
+    los : str, optional
+        Line-of-sight direction in which to apply the RSD. Default is 'z'.
+        
+    Returns
+    -------
+    x, y, z : arrays
+        Redshift-space positions of the tracer. The los axis is replaced by the redshift-space position.
+    """
 
     try:
         data = data[tracer] # Load the LRG data
