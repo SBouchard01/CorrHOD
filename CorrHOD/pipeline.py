@@ -592,7 +592,7 @@ class CorrHOD():
         else :
             output_dir = Path(path)
             
-        sim_name = Path(self.sim_params['sim_name'])
+        sim_name = self.sim_params['sim_name']
         
         # Get the cosmo and phase from sim_name (Naming convention has to end by '_c{cosmo}_p{phase}' !)
         cosmo = sim_name.split('_')[-2].split('c')[-1] # Get the cosmology number by splitting the name of the simulation
@@ -704,15 +704,23 @@ class CorrHOD():
         
         start_time = time()
         
+        print(f'Running CorrHOD with the following parameters ({hod_indice}) :')
+        print('Simulation :', self.sim_params['sim_name'])
+        for key in self.HOD_params.keys():
+            print(f'{key} : {self.HOD_params[key]}')
+        print('')
+        
+        print('Initializing and populating the halos ...')
         self.initialize_halo()
         
         if display_times:
-            print(f'Initialized the halo in {strftime("%H:%M:%S", time()-start_time)}')
+            print(f'Initialized the halos in {time()-start_time:.2f} s')
         
         self.populate_halos()
     
         self.get_tracer_positions()
         
+        print('Computing the DensitySplit ...')
         tmp_time = time()
         self.compute_DensitySplit(smooth_radius=smooth_radius, 
                                   cellsize=cellsize, 
@@ -722,26 +730,31 @@ class CorrHOD():
                                   return_density=False)
         
         if display_times:
-            print(f'Computed the DensitySplit in {strftime("%H:%M:%S", time()-tmp_time)} s')
+            print(f'Computed the DensitySplit in {time()-tmp_time:.2f} s')
         
+        print('Computing the 2PCF ...')
         tmp_time = time()
         self.compute_2pcf(mpicomm=mpicomm, mpiroot=mpiroot, nthread=nthread)
         
         if display_times:
-            print(f'Computed the 2PCF in {strftime("%H:%M:%S", time()-tmp_time)} s')
+            print(f'Computed the 2PCF in {time()-tmp_time:.2f} s')
         
         for quantile in range(nquantiles):
+            print(f'Computing the auto-correlation and cross-correlation of quantile {quantile} ...')
             tmp_time = time()
             self.compute_auto_corr(quantile, mpicomm=mpicomm, mpiroot=mpiroot, nthread=nthread)
             
             if display_times:
-                print(f'Computing the auto-correlation of quantile {quantile} in {strftime("%H:%M:%S", time()-tmp_time)} s')
+                print(f'Computing the auto-correlation of quantile {quantile} in {time()-tmp_time:.2f} s')
             
             tmp_time = time()
             self.compute_cross_corr(quantile, mpicomm=mpicomm, mpiroot=mpiroot, nthread=nthread)
             
             if display_times:
-                print(f'Computing the cross-correlation of quantile {quantile} in {strftime("%H:%M:%S", time()-tmp_time)} s')
+                print(f'Computing the cross-correlation of quantile {quantile} in {time()-tmp_time:.2f} s')
+                
+        if display_times:
+            print(f'Run_all in {time()-start_time:.2f} s')
         
         save_args = {
             'hod_indice': hod_indice,
