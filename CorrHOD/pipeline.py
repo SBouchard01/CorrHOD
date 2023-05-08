@@ -2,7 +2,8 @@ import yaml
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from time import time
+from warnings import warn
+from time import time, strftime
 
 from cosmoprimo.fiducial import AbacusSummit
 from abacusnbody.hod.abacus_hod import AbacusHOD
@@ -30,8 +31,7 @@ class CorrHOD():
                  los:str = 'z', 
                  boxsize:float = 2000, 
                  cosmo:int = 0, 
-                 phase:int = 0,
-                 display_times:bool = False):
+                 phase:int = 0,):
         """
         Initialises the CorrHOD object.
         Note that the 'tracer' parameter is fixed to 'LRG' by default. It can be changed later by manually reassigning the parameter.
@@ -58,9 +58,6 @@ class CorrHOD():
         phase : int, optional
             Index of the phase to use. This index is used to load the cosmology from the AbacusSummit object. Defaults to 0.
             The phase describes the initial conditions of the simulation. See the documentation of AbacusSummit for more details.
-            
-        display_times : bool, optional
-            If True, the time taken by each step is printed. Defaults to False.
 
         Raises
         ------
@@ -68,8 +65,6 @@ class CorrHOD():
             If the simulation is not precomputed. See the documentation of AbacusHOD for more details.
         """
         
-        
-        # TODO : Option for printing the times of each step
             
         # Set the cosmology objects
         self.cosmo = AbacusSummit(cosmo)
@@ -259,10 +254,10 @@ class CorrHOD():
             self.cubic_dict = {}
         self.cubic_dict[tracer] = tracer_dict # Overwrite the tracer dictionary if it already exists
         
-        # Set the tracer type to the one provided
+        # Set the tracer type to the one provided (Warn if it is different from the one already set)
         if hasattr(self, 'tracer'):
-            # TODO : warn that the tracer type has been changed
-            pass
+            if self.tracer != tracer: 
+                warn(f"The tracer provided ('{tracer}') will be used instead of the already existing one ('{self.tracer}').", UserWarning)
         self.tracer = tracer # Set the tracer type to the one given 
         
     
@@ -336,7 +331,7 @@ class CorrHOD():
         ds = DensitySplit(data_positions=self.data_positions, boxsize=self.boxsize)
         
         # Compute the density field and the quantiles
-        self.density = ds.get_density(smooth_radius=smooth_radius, cellsize=cellsize, sampling=sampling, filter_shape=filter_shape)
+        self.density = ds.get_density_mesh(smooth_radius=smooth_radius, cellsize=cellsize, sampling=sampling, filter_shape=filter_shape)
         self.quantiles = ds.get_quantiles(nquantiles=nquantiles)
 
         if return_density:
@@ -385,8 +380,7 @@ class CorrHOD():
             The auto-correlation of the quantile.
         """
         # Get the positions of the points in the quantile
-        quantile_data = self.quantiles[quantile]
-        quantile_positions = np.c_[quantile_data['x'], quantile_data['y'], quantile_data['z']]
+        quantile_positions = self.quantiles[quantile] # An array of 3 columns (x,y,z)
         
         if not hasattr(self, 'CF'):
             # Initialize the dictionary for the correlations
@@ -451,8 +445,7 @@ class CorrHOD():
         """
         
         # Get the positions of the points in the quantile
-        quantile_data = self.quantiles[quantile]
-        quantile_positions = np.c_[quantile_data['x'], quantile_data['y'], quantile_data['z']]
+        quantile_positions = self.quantiles[quantile] # An array of 3 columns (x,y,z)
         
         # Get the positions of the galaxies
         if not hasattr(self, 'data_positions'):
@@ -540,6 +533,7 @@ class CorrHOD():
         return xi
     
     def save(self,
+             hod_indice:int = 0,
              path:str = None,
              save_HOD:bool = True,
              save_cubic:bool = True,
@@ -548,34 +542,97 @@ class CorrHOD():
              save_quantiles:bool = True,
              save_CF:bool = True,
              save_all:bool = False):
+        """
+        Save the results of the CorrHOD object. 
+        Some of the results are saved as dictionaries in numpy files. They can be accessed using the `np.load` function,
+        and the .item() method of the loaded object. 
+
+        Parameters
+        ----------
+        hod_indice : int, optional
+            The indice of the set of HOD parameters provided to the CorrHOD Object. Defaults to 0.
+            Be careful to set the right indice if you want to save the HOD parameters !
+            
+        path : str, optional
+            The path where to save the results. If None, the path is set to the output_dir of config file. Defaults to None.
+            
+        save_HOD : bool, optional
+            If True, the HOD parameters are saved. 
+            File saved as `hod{hod_indice}_c{cosmo}_p{phase}.npy`. Defaults to True.
+            
+        save_cubic : bool, optional
+            If True, the cubic dictionary is saved. 
+            File saved as `cubic_hod{hod_indice}_c{cosmo}_p{phase}.npy`. Defaults to True.
+            
+        save_cutsky : bool, optional
+            If True, the cutsky dictionary is saved. 
+            File saved as `c{cosmo}_p{phase}_cutsky.npy`. Defaults to True.
+            
+        save_density : bool, optional
+            If True, the density PDF is saved. 
+            File saved as `density_hod{hod_indice}_c{cosmo}_p{phase}.npy`. Defaults to True.
+            
+        save_quantiles : bool, optional
+            If True, the quantiles of the densitysplit are saved. 
+            File saved as `quantiles_hod{hod_indice}_c{cosmo}_p{phase}.npy`. Defaults to True.
+            
+        save_CF : bool, optional
+            If True, the 2PCF, the autocorrelation and cross-correlation of the quantiles are saved. 
+            The 2PCF is saved as `tpcf_hod{hod_indice}_c{cosmo}_p{phase}.npy`.
+            The Auto and Corr dictionaries are saved as `ds_auto_hod{hod_indice}_c{cosmo}_p{phase}.npy` and `ds_cross_hod{hod_indice}_c{cosmo}_p{phase}.npy`.
+            Each dictionnary contains `Q{quantile}` keys with the CF of the quantile. Defaults to True.
+            
+        save_all : bool, optional
+            If True, all the results are saved. This overrides the other options. Defaults to False.
+        """
+        
         
         if path is None:
             output_dir = Path(self.sim_params['output_dir'])
+        else :
+            output_dir = Path(path)
+            
         sim_name = Path(self.sim_params['sim_name'])
+        
+        # Get the cosmo and phase from sim_name (Naming convention has to end by '_c{cosmo}_p{phase}' !)
+        cosmo = sim_name.split('_')[-2].split('c')[-1] # Get the cosmology number by splitting the name of the simulation
+        phase = sim_name.split('_')[-1].split('c')[-1] # Get the phase number by splitting the name of the simulation
         
         # TODO : Check the naming conventions for the files and save them accordingly
         # TODO : Check the format of the files we want to save
         
+        
         if save_HOD or save_all:
-            pass
+            path = output_dir / 'hod' 
+            np.save(path / f'hod{hod_indice}_c{cosmo}_p{phase}.npy', self.HOD_params)
         
         if save_cubic or save_all:
-            pass
+            path = output_dir / 'cubic'
+            np.save(path / f'cubic_hod{hod_indice}_c{cosmo}_p{phase}.npy', self.cubic_dict)
         
         if save_cutsky or save_all:
-            pass
+            path = output_dir / 'cutsky'
+            # np.save(path / f'c{cosmo}_p{phase}_cutsky.npy', self.cutsky_dict)
                     
         if save_density or save_all:
-            pass
+            path = output_dir / 'ds' / 'density'
+            np.save(path / f'density_hod{hod_indice}_c{cosmo}_p{phase}.npy', self.density)
         
         if save_quantiles or save_all:
-            pass
+            path = output_dir / 'ds' / 'quantiles'
+            np.save(path / f'quantiles_hod{hod_indice}_c{cosmo}_p{phase}.npy', self.quantiles)
         
         if save_CF or save_all:
-            pass
+            path = output_dir / 'tpcf'
+            np.save(path / f'tpcf_hod{hod_indice}_c{cosmo}_p{phase}.npy', self.CF['2PCF'])
+            
+            path = output_dir / 'ds' / 'gaussian'
+            np.save(path / f'ds_auto_hod{hod_indice}_c{cosmo}_p{phase}.npy', self.CF['Auto'])
+            np.save(path / f'ds_cross_hod{hod_indice}_c{cosmo}_p{phase}.npy', self.CF['Cross'])
         
         
     def run_all(self,
+                display_times:bool = False,
                 # Parameters for the DensitySplit
                 smooth_radius:float = 10,
                 cellsize:float = 10,
@@ -585,18 +642,78 @@ class CorrHOD():
                 # Parameters for the 2PCF, autocorrelation and cross-correlations
                 mpicomm = None,
                 mpiroot = None,
-                nthread:int = 16
+                nthread:int = 16,
                 # Parameters for saving the results
+                hod_indice:int = 0,
+                path:str = None,
+                **kwargs
                 ):
+        """
+        Run all the steps of the CorrHOD object. See tests/test_corrHOD.py for an example of how to use it and its contents.
         
+        Note that the **kwargs are used to set the parameters of the save function. If nothing is provided, nothing will be saved.
+        See the documentation of the save function for more details.
+
+        Parameters
+        ----------
+        display_times : bool, optional
+            If True, the times taken by each step will be displayed. Defaults to False.
+            
+        smooth_radius : float, optional
+            The radius of the Gaussian smoothing in Mpc/h used in the densitysplit. 
+            See https://github.com/epaillas/densitysplit for more details. Defaults to 10.
+            
+        cellsize : float, optional
+            The size of the cells in the mesh used in the densitysplit. 
+            See https://github.com/epaillas/densitysplit for more details. Defaults to 10.
+            
+        nquantiles : int, optional
+            The number of quantiles to define in the densitysplit. 
+            see https://github.com/epaillas/densitysplit for more details. Defaults to 10.
+            
+        sampling : str, optional
+            The type of sampling to use in the densitysplit. 
+            See https://github.com/epaillas/densitysplit for more details. Defaults to 'randoms'.
+            
+        filter_shape : str, optional
+            The shape of the smoothing filter to use in the densitysplit.
+            see https://github.com/epaillas/densitysplit for more details. Defaults to 'Gaussian'.
+            
+        mpicomm : _type_, optional
+            The MPI communicator used in the 2PCF, autocorrelation and cross-correlations. Defaults to None.
+            
+        mpiroot : _type_, optional
+            The MPI root used in the 2PCF, autocorrelation and cross-correlations. Defaults to None.
+            
+        nthread : int, optional
+            The number of threads to use in the 2PCF, autocorrelation and cross-correlations. Defaults to 16.
+            
+        hod_indice : int, optional
+            The indice of the set of HOD parameters provided to the CorrHOD Object. Defaults to 0.
+            Be careful to set the right indice if you want to save the HOD parameters !
+            
+        path : str, optional
+            The path where to save the results. If None, the path is set to the output_dir of config file. Defaults to None.
+            
+        **kwargs : dict, optional
+            The parameters to pass to the save function. See the documentation of the save function for more details.
+            If nothing is provided, nothing will be saved.
+        """
         # On rank 0, initialize the halo, populate it and get the positions of the galaxies
+        # TODO : Handle MPI
+        
+        start_time = time()
         
         self.initialize_halo()
+        
+        if display_times:
+            print(f'Initialized the halo in {strftime("%H:%M:%S", time()-start_time)}')
         
         self.populate_halos()
     
         self.get_tracer_positions()
         
+        tmp_time = time()
         self.compute_DensitySplit(smooth_radius=smooth_radius, 
                                   cellsize=cellsize, 
                                   nquantiles=nquantiles,
@@ -604,20 +721,47 @@ class CorrHOD():
                                   filter_shape=filter_shape,
                                   return_density=False)
         
+        if display_times:
+            print(f'Computed the DensitySplit in {strftime("%H:%M:%S", time()-tmp_time)} s')
+        
+        tmp_time = time()
         self.compute_2pcf(mpicomm=mpicomm, mpiroot=mpiroot, nthread=nthread)
         
-        for quantile in range(nquantiles):
-            self.compute_auto_corr(quantile, mpicomm=mpicomm, mpiroot=mpiroot, nthread=nthread)
-            self.compute_cross_corr(quantile, mpicomm=mpicomm, mpiroot=mpiroot, nthread=nthread)
+        if display_times:
+            print(f'Computed the 2PCF in {strftime("%H:%M:%S", time()-tmp_time)} s')
         
-        self.save(save_all=True) # TODO : Add the options in the parameters
-    
-    
-    # TODO : Document the functions
-    
-    # TODO : Add checks and warnings if needed
-    
-    # TODO : Handle MPI
+        for quantile in range(nquantiles):
+            tmp_time = time()
+            self.compute_auto_corr(quantile, mpicomm=mpicomm, mpiroot=mpiroot, nthread=nthread)
+            
+            if display_times:
+                print(f'Computing the auto-correlation of quantile {quantile} in {strftime("%H:%M:%S", time()-tmp_time)} s')
+            
+            tmp_time = time()
+            self.compute_cross_corr(quantile, mpicomm=mpicomm, mpiroot=mpiroot, nthread=nthread)
+            
+            if display_times:
+                print(f'Computing the cross-correlation of quantile {quantile} in {strftime("%H:%M:%S", time()-tmp_time)} s')
+        
+        save_args = {
+            'hod_indice': hod_indice,
+            'path': path,
+            'save_HOD': False,
+            'save_cubic': False,
+            'save_cutsky': False,
+            'save_density': False,
+            'save_quantiles': False,
+            'save_CF': False,
+            'save_all': False
+        }
+        for key, value in kwargs.items():
+            if key in save_args.keys():
+                save_args[key] = value
+            else:
+                warn(f'Unknown argument {key}={value} in run_all. It will be ignored.', UserWarning)
+        
+        self.save(**save_args)
+
     
     # TODO : Option for the HOD parameters to be a dictionary or a list of dictionaries (for the MCMC)
     # Not a good idea ?
