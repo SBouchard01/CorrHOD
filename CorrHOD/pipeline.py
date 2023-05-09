@@ -13,7 +13,7 @@ from densitysplit.utilities import sky_to_cartesian
 from densitysplit.cosmology import Cosmology
 
 from mockfactory import setup_logging
-from pycorr import TwoPointCorrelationFunction
+from pycorr import TwoPointCorrelationFunction, project_to_multipoles
 
 from utils import apply_rsd
 
@@ -350,7 +350,7 @@ class CorrHOD():
                           nthread:int = 16):
         """
         Compute the auto-correlation of a quantile.
-        The result will also be saved in the class, as `self.CF['Auto'][f'Q{quantile}']`
+        The result will also be saved in the class, as `self.CF['Auto'][f'DS{quantile}']`
 
         Parameters
         ----------
@@ -379,15 +379,22 @@ class CorrHOD():
         xi_quantile : pycorr.TwoPointCorrelationFunction
             The auto-correlation of the quantile.
         """
+        
+        if not hasattr(self, 'quantiles'):
+            raise ValueError('The quantiles have not been computed yet. Run compute_DensitySplit first.')
+        
         # Get the positions of the points in the quantile
         quantile_positions = self.quantiles[quantile] # An array of 3 columns (x,y,z)
         
         if not hasattr(self, 'CF'):
             # Initialize the dictionary for the correlations
             self.CF = {} 
-        if not ('Auto' in self.CF.keys()):
+        if not (self.los in self.CF.keys()):
+            # Initialize the dictionary for the correlations
+            self.CF[self.los] = {} 
+        if not ('Auto' in self.CF[self.los].keys()):
             # Initialize the dictionary for the auto-correlations
-            self.CF['Auto'] = {}
+            self.CF[self.los]['Auto'] = {}
         
         # Compute the 2pcf
         setup_logging()
@@ -399,7 +406,14 @@ class CorrHOD():
                                                   mpicomm=mpicomm, mpiroot=mpiroot, num_threads=nthread) 
         
         # Add the 2pcf to the dictionary
-        self.CF['Auto'][f'Q{quantile}'] = xi_quantile # TODO : check if the key is correct (might be DS{quantile} ?)
+        if not ('s' in self.CF[self.los]):
+            # Note that the s is the same for all the lines of sight as long as we give the same edges to the 2PCF function
+            s, poles = project_to_multipoles(xi_quantile)
+            self.CF[self.los]['s'] = s
+        else:
+            poles = project_to_multipoles(xi_quantile, return_sep=False)
+            
+        self.CF[self.los]['Auto'][f'DS{quantile}'] = poles 
         
         return xi_quantile
     
@@ -414,7 +428,7 @@ class CorrHOD():
                            nthread:int = 16):
         """
         Compute the cross-correlation of a quantile with the galaxies.
-        The result will also be saved in the class, as `self.CF['Cross'][f'Q{quantile}']`
+        The result will also be saved in the class, as `self.CF['Cross'][f'DS{quantile}']`
         
         Parameters
         ----------
@@ -444,6 +458,9 @@ class CorrHOD():
             The cross-correlation of the quantile.
         """
         
+        if not hasattr(self, 'quantiles'):
+            raise ValueError('The quantiles have not been computed yet. Run compute_DensitySplit first.')
+        
         # Get the positions of the points in the quantile
         quantile_positions = self.quantiles[quantile] # An array of 3 columns (x,y,z)
         
@@ -454,9 +471,12 @@ class CorrHOD():
         if not hasattr(self, 'CF'):
             # Initialize the dictionary for the correlations
             self.CF = {} 
-        if not ('Cross' in self.CF.keys()):
+        if not (self.los in self.CF.keys()):
+            # Initialize the dictionary for the correlations
+            self.CF[self.los] = {} 
+        if not ('Cross' in self.CF[self.los].keys()):
             # Initialize the dictionary for the auto-correlations
-            self.CF['Cross'] = {}
+            self.CF[self.los]['Cross'] = {}
         
         # Compute the 2pcf
         setup_logging()
@@ -469,7 +489,14 @@ class CorrHOD():
                                                   mpicomm=mpicomm, mpiroot=mpiroot, num_threads=nthread)
         
         # Add the 2pcf to the dictionary
-        self.CF['Cross'][f'Q{quantile}'] = xi_quantile # TODO : check if the key is correct (might be DS{quantile} ?)
+        if not ('s' in self.CF[self.los]):
+            # Note that the s is the same for all the lines of sight as long as we give the same edges to the 2PCF function
+            s, poles = project_to_multipoles(xi_quantile)
+            self.CF[self.los]['s'] = s
+        else:
+            poles = project_to_multipoles(xi_quantile, return_sep=False)
+            
+        self.CF[self.los]['Cross'][f'DS{quantile}'] = poles 
         
         return xi_quantile
     
@@ -514,9 +541,12 @@ class CorrHOD():
         if not hasattr(self, 'CF'):
             # Initialize the dictionary for the correlations
             self.CF = {} 
-        if not ('2PCF' in self.CF.keys()):
+        if not (self.los in self.CF.keys()):
+            # Initialize the dictionary for the correlations
+            self.CF[self.los] = {} 
+        if not ('2PCF' in self.CF[self.los].keys()):
             # Initialize the dictionary for the 2PCF
-            self.CF['2PCF'] = {}
+            self.CF[self.los]['2PCF'] = {}
     
         # Compute the 2pcf
         setup_logging()
@@ -528,9 +558,92 @@ class CorrHOD():
                                          mpicomm = mpicomm, mpiroot = mpiroot, num_threads = nthread)
         
         # Add the 2pcf to the dictionary
-        self.CF['2PCF'] = xi
+        self.CF[self.los]['2PCF'] = xi
+        
+        # Add the 2pcf to the dictionary
+        if not ('s' in self.CF[self.los]):
+            # Note that the s is the same for all the lines of sight as long as we give the same edges to the 2PCF function
+            s, poles = project_to_multipoles(xi)
+            self.CF[self.los]['s'] = s
+        else:
+            poles = project_to_multipoles(xi, return_sep=False)
+            
+        self.CF[self.los]['2PCF'] = poles
         
         return xi
+    
+    
+    
+    def average_CF(self,
+                   average_on:list = ['x', 'y', 'z']
+                   ):
+        """
+        Averages the 2PCF, autocorrelation and cross-correlation of the quantiles on the three lines of sight. available (x, y and z)
+        
+        Parameters
+        ----------
+        average_on : list, optional
+            The lines of sight to average on. Defaults to ['x', 'y', 'z']. The CFs must have been computed on these lines of sight before calling this function.
+            
+        Returns
+        -------
+        CF_average : dict
+            Dictionary containing the averaged 2PCF, autocorrelation and cross-correlation of the quantiles on the lines of sight. 
+            It contains :
+            * `s` : the separation bins (identical for all the lines of sight, as long as the same edges are used for the 2PCF),
+            * `2PCF` : the averaged poles of the 2PCF,
+            * `Auto` : a dictionary containing the averaged autocorrelation of the quantiles. It contains for each quantile `DS{quantile}` as the poles of the autocorrelation,
+            * `Cross` : a dictionary containing the averaged cross-correlation of the quantiles. It contains for each quantile `DS{quantile}` as the poles of the cross-correlation.
+            
+        """
+        
+        los_list = average_on
+        
+        # Initialize the dictionary for the averaged correlations
+        self.CF['average'] = {}
+        
+        # TODO : Check if the 2PCF, autocorrelation and cross-correlation of the quantiles are already computed
+        if not hasattr(self, 'CF'):
+            raise ValueError('No correlation has been computed yet. Run compute_2pcf, compute_auto_corr and/or compute_cross_corr first.')
+        for los in los_list:
+            if not (los in self.CF.keys()):
+                raise ValueError(f'The {los} line of sight has not been computed yet. Run compute_2pcf, compute_auto_corr and/or compute_cross_corr first.')
+            if not ('2PCF' in self.CF[los].keys()):
+                raise ValueError(f'The 2PCF of the {los} line of sight has not been computed yet. Run compute_2pcf first.')
+            if not ('Auto' in self.CF[los].keys()):
+                raise ValueError(f'The autocorrelation of the {los} line of sight has not been computed yet. Run compute_auto_corr first.')
+            if not ('Cross' in self.CF[los].keys()):
+                raise ValueError(f'The cross-correlation of the {los} line of sight has not been computed yet. Run compute_cross_corr first.')
+        
+        # Note that the s is the same for all the lines of sight as long as we give the same edges to the 2PCF function
+        s = self.CF[los_list[0]]['s'] # Get the separation bins (Same for all the CFs, we take the first one available)
+        self.CF['average']['s'] = s
+        
+        poles=[]
+        # Average the 2PCF
+        for los in los_list:
+            poles.append(self.CF[los]['2PCF'])
+        self.CF['average']['2PCF'] = np.mean(poles, axis=0)
+        
+        # Average the autocorrelation of the quantiles
+        self.CF['average']['Auto'] = {}
+        for quantile in range(self.quantiles.shape[0]):
+            poles = []
+            for los in los_list:
+                poles.append(self.CF[los]['Auto'][f'DS{quantile}'])
+            self.CF['average']['Auto'][f'DS{quantile}'] = np.mean(poles, axis=0)
+        
+        # TODO
+        # Average the cross-correlation of the quantiles
+        self.CF['average']['Cross'] = {}
+        for quantile in range(self.quantiles.shape[0]):
+            poles = []
+            for los in los_list:
+                poles.append(self.CF[los]['Cross'][f'DS{quantile}'])
+            self.CF['average']['Cross'][f'DS{quantile}'] = np.mean(poles, axis=0)
+    
+        return self.CF['average']
+    
     
     def save(self,
              hod_indice:int = 0,
@@ -541,6 +654,7 @@ class CorrHOD():
              save_density:bool = True,
              save_quantiles:bool = True,
              save_CF:bool = True,
+             los:str = 'average', 
              save_all:bool = False):
         """
         Save the results of the CorrHOD object. 
@@ -579,8 +693,14 @@ class CorrHOD():
         save_CF : bool, optional
             If True, the 2PCF, the autocorrelation and cross-correlation of the quantiles are saved. 
             The 2PCF is saved as `tpcf_hod{hod_indice}_c{cosmo}_p{phase}.npy`.
+            It contains the separation bins in the `s` key and the poles in the `2PCF` key.
             The Auto and Corr dictionaries are saved as `ds_auto_hod{hod_indice}_c{cosmo}_p{phase}.npy` and `ds_cross_hod{hod_indice}_c{cosmo}_p{phase}.npy`.
-            Each dictionnary contains `Q{quantile}` keys with the CF of the quantile. Defaults to True.
+            Each dictionnary contains `DS{quantile}` keys with the CF of the quantile. The `s` key contains the separation bins.
+            Defaults to True.
+            
+        save_los : str, optional
+            The line of sight along which to save the 2PCF, the autocorrelation and cross-correlation of the quantiles. 
+            Can be 'x', 'y', 'z' or 'average'. Defaults to 'average'.
             
         save_all : bool, optional
             If True, all the results are saved. This overrides the other options. Defaults to False.
@@ -598,8 +718,7 @@ class CorrHOD():
         cosmo = sim_name.split('_')[-2].split('c')[-1] # Get the cosmology number by splitting the name of the simulation
         phase = sim_name.split('_')[-1].split('c')[-1] # Get the phase number by splitting the name of the simulation
         
-        # TODO : Check the naming conventions for the files and save them accordingly
-        # TODO : Check the format of the files we want to save
+        # TODO : Check that the dicts exist before saving them...
         
         
         if save_HOD or save_all:
@@ -623,12 +742,23 @@ class CorrHOD():
             np.save(path / f'quantiles_hod{hod_indice}_c{cosmo}_p{phase}.npy', self.quantiles)
         
         if save_CF or save_all:
+            
+            # First, we check that the provided los is expected
+            if los not in ['x', 'y', 'z', 'average']:
+                raise ValueError(f'The line of sight must be "x", "y", "z" or "average". Got {los}.')
+            
+            
+            # Setting the dictionaries to save depending on the los, with the right format
+            tpcf_dict = {'s': self.CF[los]['s'], '2PCF': self.CF[los]['2PCF']}
+            auto_dict = {'s': self.CF[los]['s'], **self.CF[los]['Auto']}
+            cross_dict = {'s': self.CF[los]['s'], **self.CF[los]['Cross']}
+            
             path = output_dir / 'tpcf'
-            np.save(path / f'tpcf_hod{hod_indice}_c{cosmo}_p{phase}.npy', self.CF['2PCF'])
+            np.save(path / f'tpcf_hod{hod_indice}_c{cosmo}_p{phase}.npy', tpcf_dict)
             
             path = output_dir / 'ds' / 'gaussian'
-            np.save(path / f'ds_auto_hod{hod_indice}_c{cosmo}_p{phase}.npy', self.CF['Auto'])
-            np.save(path / f'ds_cross_hod{hod_indice}_c{cosmo}_p{phase}.npy', self.CF['Cross'])
+            np.save(path / f'ds_auto_hod{hod_indice}_c{cosmo}_p{phase}.npy', auto_dict)
+            np.save(path / f'ds_cross_hod{hod_indice}_c{cosmo}_p{phase}.npy', cross_dict)
         
         
     def run_all(self,
@@ -782,5 +912,7 @@ class CorrHOD():
     
 # Utils and scripts outside the class
     # TODO : Functions to turn arrays to dictionaries and vice versa (With option for log_sigma)
+    
+    # TODO : Function to compile the saved CFs as a dictionary (with the right format) for sunbird
     
     # TODO : Script to prepare the simulation if needed
