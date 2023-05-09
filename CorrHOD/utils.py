@@ -74,3 +74,35 @@ def apply_rsd(data, boxsize, redshift, cosmo, tracer='LRG', los = 'z'):
         raise ValueError('los must be x, y or z')
     
     return x, y, z
+
+
+
+def array_to_dict(array):
+    """
+    Converts an array of values into a dictionary of HOD parameters
+    
+    Parameters
+    ----------
+    array: array_like
+        Array of values for the HOD parameters. The order of the parameters must be the following:
+        [logM_cut, logM1, sigma, alpha, kappa, alpha_c, alpha_s, Bcent, Bsat]
+    
+    Returns
+    -------
+    hod_dict: dict
+        Dictionary of HOD parameters
+    """
+        
+    hod_dict = {
+        'logM_cut': array[0],
+        'logM1':    array[1], 
+        'sigma':    array[2], 
+        'alpha':    array[3], 
+        'kappa':    array[4], 
+        'alpha_c':  array[5], 
+        'alpha_s':  array[6], 
+        'Bcent':    array[7], 
+        'Bsat':     array[8]
+    }
+    
+    return hod_dict
