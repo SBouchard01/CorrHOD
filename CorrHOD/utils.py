@@ -1,4 +1,4 @@
-
+import numpy as np
 from warnings import warn
 
 def apply_rsd(data, boxsize, redshift, cosmo, tracer='LRG', los = 'z'):
@@ -77,7 +77,7 @@ def apply_rsd(data, boxsize, redshift, cosmo, tracer='LRG', los = 'z'):
 
 
 
-def array_to_dict(array):
+def array_to_dict(array, is_log_sigma=False):
     """
     Converts an array of values into a dictionary of HOD parameters
     
@@ -105,4 +105,39 @@ def array_to_dict(array):
         'Bsat':     array[8]
     }
     
+    # Handle the case where sigma is in log10
+    if is_log_sigma:
+        hod_dict['sigma'] = 10 ** hod_dict['sigma']
+    
     return hod_dict
+
+
+def dict_to_array(dic:dict):
+    """
+    Converts a dictionary of HOD parameters into an array of values
+    
+    Parameters
+    ----------
+    dic: dict
+        Dictionary of HOD parameters. The keys must be the following:
+        ['logM_cut', 'logM1', 'sigma', 'alpha', 'kappa', 'alpha_c', 'alpha_s', 'Bcent', 'Bsat']
+    
+    Returns
+    -------
+    array: array_like
+        Array of values for the HOD parameters
+    """
+    
+    array = np.array([
+        dic['logM_cut'],
+        dic['logM1'],
+        dic['sigma'],
+        dic['alpha'],
+        dic['kappa'],
+        dic['alpha_c'],
+        dic['alpha_s'],
+        dic['Bcent'],
+        dic['Bsat']
+    ])
+    
+    return array
