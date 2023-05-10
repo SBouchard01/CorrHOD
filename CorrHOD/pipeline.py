@@ -30,8 +30,7 @@ class CorrHOD():
                  path2config:str,  
                  los:str = 'z', 
                  boxsize:float = 2000, 
-                 cosmo:int = 0, 
-                 phase:int = 0,):
+                 cosmo:int = 0):
         """
         Initialises the CorrHOD object.
         Note that the 'tracer' parameter is fixed to 'LRG' by default. It can be changed later by manually reassigning the parameter.
@@ -627,7 +626,7 @@ class CorrHOD():
         
         # Average the autocorrelation of the quantiles
         self.CF['average']['Auto'] = {}
-        for quantile in range(self.quantiles.shape[0]):
+        for quantile in range(len(self.quantiles)):
             poles = []
             for los in los_list:
                 poles.append(self.CF[los]['Auto'][f'DS{quantile}'])
@@ -636,7 +635,7 @@ class CorrHOD():
         # TODO
         # Average the cross-correlation of the quantiles
         self.CF['average']['Cross'] = {}
-        for quantile in range(self.quantiles.shape[0]):
+        for quantile in range(len(self.quantiles)):
             poles = []
             for los in los_list:
                 poles.append(self.CF[los]['Cross'][f'DS{quantile}'])
@@ -762,6 +761,7 @@ class CorrHOD():
         
         
     def run_all(self,
+                los_to_compute='average',
                 display_times:bool = False,
                 # Parameters for the DensitySplit
                 smooth_radius:float = 10,
@@ -770,6 +770,7 @@ class CorrHOD():
                 sampling:str = 'randoms',
                 filter_shape:str = 'Gaussian',
                 # Parameters for the 2PCF, autocorrelation and cross-correlations
+                edges = [np.linspace(0.1, 200, 50), np.linspace(-1, 1, 60)],
                 mpicomm = None,
                 mpiroot = None,
                 nthread:int = 16,
@@ -786,8 +787,13 @@ class CorrHOD():
 
         Parameters
         ----------
+        los_to_compute : str, optional
+            The line of sight along which to compute the 2PCF, the autocorrelation and cross-correlation of the quantiles.
+            If set to 'average', the 2PCF, the autocorrelation and cross-correlation of the quantiles will be averaged on the three lines of sight. Defaults to 'average'.
+        
         display_times : bool, optional
             If True, the times taken by each step will be displayed. Defaults to False.
+            Times will also be saved in the `times_dict` attribute of the CorrHOD object.
             
         smooth_radius : float, optional
             The radius of the Gaussian smoothing in Mpc/h used in the densitysplit. 
@@ -809,6 +815,9 @@ class CorrHOD():
             The shape of the smoothing filter to use in the densitysplit.
             see https://github.com/epaillas/densitysplit for more details. Defaults to 'Gaussian'.
             
+        edges : list, optional
+            The edges of the s, mu bins to use for the 2PCF, autocorrelation and cross-correlations. Defaults to [np.linspace(0.1, 200, 50), np.linspace(-1, 1, 60)].
+            
         mpicomm : _type_, optional
             The MPI communicator used in the 2PCF, autocorrelation and cross-correlations. Defaults to None.
             
@@ -829,63 +838,106 @@ class CorrHOD():
             The parameters to pass to the save function. See the documentation of the save function for more details.
             If nothing is provided, nothing will be saved.
         """
-        # On rank 0, initialize the halo, populate it and get the positions of the galaxies
+
+        # TODO : Add edges for CFs as an option
         # TODO : Handle MPI
         
+        if los_to_compute=='average':
+            los_list = ['x', 'y', 'z']
+        else:
+            los_list = [los_to_compute]
+        
         start_time = time()
+        self.times_dict = {} # Saving the times taken by each step in a dict to call them later if needed
         
         print(f'Running CorrHOD with the following parameters ({hod_indice}) :')
         print('Simulation :', self.sim_params['sim_name'])
         for key in self.HOD_params.keys():
             print(f'{key} : {self.HOD_params[key]}')
+        print(f"Number density : {self.data_params['tracer_density_mean'][self.tracer]:.2e} h^3/Mpc^3")
         print('')
         
         print('Initializing and populating the halos ...')
-        self.initialize_halo()
+        self.initialize_halo() # Initialize the halo
         
+        self.times_dict['initialize_halo'] = time()-start_time
         if display_times:
-            print(f'Initialized the halos in {time()-start_time:.2f} s')
+            print(f"Initialized the halos in {self.times_dict['initialize_halo']:.2f} s\n")
         
-        self.populate_halos()
+        
+        self.populate_halos() # Populate the halos
+        
+        print('') # Just to add a space because populate_halos has a built-in print I can't remove
     
-        self.get_tracer_positions()
-        
-        print('Computing the DensitySplit ...')
-        tmp_time = time()
-        self.compute_DensitySplit(smooth_radius=smooth_radius, 
-                                  cellsize=cellsize, 
-                                  nquantiles=nquantiles,
-                                  sampling=sampling, 
-                                  filter_shape=filter_shape,
-                                  return_density=False)
-        
-        if display_times:
-            print(f'Computed the DensitySplit in {time()-tmp_time:.2f} s')
-        
-        print('Computing the 2PCF ...')
-        tmp_time = time()
-        self.compute_2pcf(mpicomm=mpicomm, mpiroot=mpiroot, nthread=nthread)
-        
-        if display_times:
-            print(f'Computed the 2PCF in {time()-tmp_time:.2f} s')
-        
-        for quantile in range(nquantiles):
-            print(f'Computing the auto-correlation and cross-correlation of quantile {quantile} ...')
+        # here, we run all the CF computations for each los given in los_to_compute.
+        # We will then average the results on the lines of sight if needed
+        for los in los_list:
+                     
+            los_time = time()
+            self.times_dict[los] = {} # Initialize the dict for the times taken by each step for this los
+            
+            print(f'Computing along the {los} line of sight ...')
+            self.los = los # Reassign the los we will work on
+            
+            self.get_tracer_positions() # Get the positions of the galaxies with RSD on the line of sight
+            
+            # Compute the DensitySplit
+            print('Computing the DensitySplit ...')
             tmp_time = time()
-            self.compute_auto_corr(quantile, mpicomm=mpicomm, mpiroot=mpiroot, nthread=nthread)
+            self.compute_DensitySplit(smooth_radius=smooth_radius, 
+                                      cellsize=cellsize, 
+                                      nquantiles=nquantiles,
+                                      sampling=sampling, 
+                                      filter_shape=filter_shape,
+                                      return_density=False)
             
+            self.times_dict[los]['compute_DensitySplit'] = time()-tmp_time
             if display_times:
-                print(f'Computing the auto-correlation of quantile {quantile} in {time()-tmp_time:.2f} s')
+                print(f"Computed the DensitySplit in {self.times_dict[los]['compute_DensitySplit']:.2f} s\n")
             
+            # Compute the 2PCF
+            print('Computing the 2PCF ...')
             tmp_time = time()
-            self.compute_cross_corr(quantile, mpicomm=mpicomm, mpiroot=mpiroot, nthread=nthread)
+            self.compute_2pcf(edges=edges, mpicomm=mpicomm, mpiroot=mpiroot, nthread=nthread)
             
+            self.times_dict[los]['compute_2pcf'] = time()-tmp_time
             if display_times:
-                print(f'Computing the cross-correlation of quantile {quantile} in {time()-tmp_time:.2f} s')
+                print(f"Computed the 2PCF in {self.times_dict[los]['compute_2pcf']:.2f} s\n")
+            
+            # For each quantile, compute the autocorrelation and cross-correlation
+            self.times_dict[los]['compute_auto_corr'] = {}
+            self.times_dict[los]['compute_cross_corr'] = {}
+            
+            for quantile in range(nquantiles):
+                print(f'Computing the auto-correlation and cross-correlation of quantile {quantile} ...')
+                tmp_time = time()
+                self.compute_auto_corr(quantile, edges=edges,mpicomm=mpicomm, mpiroot=mpiroot, nthread=nthread)
                 
-        if display_times:
-            print(f'Run_all in {time()-start_time:.2f} s')
+                self.times_dict[los]['compute_auto_corr'][f'DS{quantile}'] = time()-tmp_time
+                if display_times:
+                    print(f"Computed the auto-correlation of quantile {quantile} in {self.times_dict[los]['compute_auto_corr'][f'DS{quantile}']:.2f} s")
+                
+                tmp_time = time()
+                self.compute_cross_corr(quantile, edges=edges,mpicomm=mpicomm, mpiroot=mpiroot, nthread=nthread)
+                
+                self.times_dict[los]['compute_cross_corr'][f'DS{quantile}'] = time()-tmp_time
+                if display_times:
+                    print(f"Computed the cross-correlation of quantile {quantile} in {self.times_dict[los]['compute_cross_corr'][f'DS{quantile}']:.2f} s")
+            
+            print('')
+            
+            self.times_dict[los]['run_los'] = time()-los_time
+            if display_times:
+                print(f"Ran los '{los}' in {self.times_dict[los]['run_los']:.2f} s\n")
+            
+        # Average the 2PCF, autocorrelation and cross-correlation of the quantiles on the lines of sight  
+        self.average_CF(average_on=los_list) 
         
+        self.times_dict['run_all'] = time()-start_time
+        if display_times:
+            print(f"Run_all in {self.times_dict['run_all']:.2f} s")
+        
+        # Here, we define the arguments to pass to the save function by default (nothing will be saved)
         save_args = {
             'hod_indice': hod_indice,
             'path': path,
@@ -897,22 +949,18 @@ class CorrHOD():
             'save_CF': False,
             'save_all': False
         }
+        # We update the arguments with the kwargs provided by the user
         for key, value in kwargs.items():
             if key in save_args.keys():
                 save_args[key] = value
             else:
+                # If the argument is not an argument of the save function, we warn the user
                 warn(f'Unknown argument {key}={value} in run_all. It will be ignored.', UserWarning)
         
-        self.save(**save_args)
-
-    
-    # TODO : Option for the HOD parameters to be a dictionary or a list of dictionaries (for the MCMC)
-    # Not a good idea ?
+        self.save(**save_args) # Save the results
     
     
 # Utils and scripts outside the class
-    # TODO : Functions to turn arrays to dictionaries and vice versa (With option for log_sigma)
-    
     # TODO : Function to compile the saved CFs as a dictionary (with the right format) for sunbird
     
     # TODO : Script to prepare the simulation if needed
