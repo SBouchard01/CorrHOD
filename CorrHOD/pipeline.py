@@ -609,7 +609,7 @@ class CorrHOD():
         # Initialize the dictionary for the averaged correlations
         self.CF['average'] = {}
         
-        # TODO : Check if the 2PCF, autocorrelation and cross-correlation of the quantiles are already computed
+        # Check if the 2PCF, autocorrelation and cross-correlation of the quantiles are already computed
         if not hasattr(self, 'CF'):
             raise ValueError('No correlation has been computed yet. Run compute_2pcf, compute_auto_corr and/or compute_cross_corr first.')
         for los in los_list:
@@ -640,7 +640,6 @@ class CorrHOD():
                 poles.append(self.CF[los]['Auto'][f'DS{quantile}'])
             self.CF['average']['Auto'][f'DS{quantile}'] = np.mean(poles, axis=0)
         
-        # TODO
         # Average the cross-correlation of the quantiles
         self.CF['average']['Cross'] = {}
         for quantile in range(len(self.quantiles)):
@@ -725,48 +724,72 @@ class CorrHOD():
         cosmo = sim_name.split('_')[-2].split('c')[-1] # Get the cosmology number by splitting the name of the simulation
         phase = sim_name.split('_')[-1].split('c')[-1] # Get the phase number by splitting the name of the simulation
         
-        # TODO : Check that the dicts exist before saving them...
-        # TODO : Create the directories if they don't exist
+        # Get the HOD indice in the right format (same as the cosmology and phase)
+        hod_indice = f'{hod_indice:03d}'
         
+        # Note : If the user explicitly wants to save somethig, it is assumed that it has been computed before.
+        # No error is explicitly raised if the user tries to save something that has not been computed yet.
+        # If the user wants to save everything, the results are saved only if they exist.
         
-        if save_HOD or save_all:
+        if save_HOD or (save_all and hasattr(self, 'HOD_params')):
             path = output_dir / 'hod' 
+            path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
             np.save(path / f'hod{hod_indice}_c{cosmo}_p{phase}.npy', self.HOD_params)
         
-        if save_cubic or save_all:
+        if save_cubic or (save_all and hasattr(self, 'cubic_dict')):
+            # Pass if the cubic dictionary has not been computed yet
+            if not hasattr(self, 'cubic_dict'):
+                warn('The cubic dictionary has not been computed yet. Run populate_halos first.', UserWarning)
+                pass
             path = output_dir / 'cubic'
+            path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
             np.save(path / f'cubic_hod{hod_indice}_c{cosmo}_p{phase}.npy', self.cubic_dict)
         
-        if save_cutsky or save_all:
+        if save_cutsky or (save_all and hasattr(self, 'cutsky_dict')):
             path = output_dir / 'cutsky'
+            path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
             # np.save(path / f'c{cosmo}_p{phase}_cutsky.npy', self.cutsky_dict)
                     
-        if save_density or save_all:
+        if save_density or (save_all and hasattr(self, 'density')):
             path = output_dir / 'ds' / 'density'
+            path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
             np.save(path / f'density_hod{hod_indice}_c{cosmo}_p{phase}.npy', self.density)
         
-        if save_quantiles or save_all:
+        if save_quantiles or (save_all and hasattr(self, 'quantiles')):
             path = output_dir / 'ds' / 'quantiles'
+            path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
             np.save(path / f'quantiles_hod{hod_indice}_c{cosmo}_p{phase}.npy', self.quantiles)
         
-        if save_CF or save_all:
+        if save_CF or (save_all and hasattr(self, 'CF')):
             
             # First, we check that the provided los is expected
             if los not in ['x', 'y', 'z', 'average']:
                 raise ValueError(f'The line of sight must be "x", "y", "z" or "average". Got {los}.')
             
+            # Check that the CF has been computed on the provided los
+            if los not in self.CF.keys():
+                raise ValueError(f'The {los} line of sight has not been computed yet. Run compute_2pcf, compute_auto_corr and/or compute_cross_corr first.', UserWarning)
             
-            # Setting the dictionaries to save depending on the los, with the right format
-            tpcf_dict = {'s': self.CF[los]['s'], '2PCF': self.CF[los]['2PCF']}
-            auto_dict = {'s': self.CF[los]['s'], **self.CF[los]['Auto']}
-            cross_dict = {'s': self.CF[los]['s'], **self.CF[los]['Cross']}
+            # From now on, we only save the CFs that have been computed on the provided los
+            if '2PCF' in self.CF[los].keys():
+                tpcf_dict = {'s': self.CF[los]['s'], '2PCF': self.CF[los]['2PCF']} 
             
-            path = output_dir / 'tpcf'
-            np.save(path / f'tpcf_hod{hod_indice}_c{cosmo}_p{phase}.npy', tpcf_dict)
+                path = output_dir / 'tpcf'
+                path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
+                np.save(path / f'tpcf_hod{hod_indice}_c{cosmo}_p{phase}.npy', tpcf_dict)
             
-            path = output_dir / 'ds' / 'gaussian'
-            np.save(path / f'ds_auto_hod{hod_indice}_c{cosmo}_p{phase}.npy', auto_dict)
-            np.save(path / f'ds_cross_hod{hod_indice}_c{cosmo}_p{phase}.npy', cross_dict)
+            if 'Auto' in self.CF[los].keys():
+                auto_dict = {'s': self.CF[los]['s'], **self.CF[los]['Auto']}
+                
+                path = output_dir / 'ds' / 'gaussian'
+                path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
+                np.save(path / f'ds_auto_hod{hod_indice}_c{cosmo}_p{phase}.npy', auto_dict)
+            
+            if 'Cross' in self.CF[los].keys():
+                cross_dict = {'s': self.CF[los]['s'], **self.CF[los]['Cross']}
+                path = output_dir / 'ds' / 'gaussian'
+                path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
+                np.save(path / f'ds_cross_hod{hod_indice}_c{cosmo}_p{phase}.npy', cross_dict)
         
         
     def run_all(self,
@@ -848,8 +871,8 @@ class CorrHOD():
             If nothing is provided, nothing will be saved.
         """
 
-        # TODO : Add edges for CFs as an option
         # TODO : Handle MPI
+        # TODO : Change outputs from print to logging to have a better control of the outputs
         
         if los_to_compute=='average':
             los_list = ['x', 'y', 'z']
