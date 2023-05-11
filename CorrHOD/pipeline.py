@@ -152,6 +152,14 @@ class CorrHOD():
         # Run the HOD and get the dictionary containing the HOD catalogue
         self.cubic_dict = self.Ball.run_hod(self.Ball.tracers, self.Ball.want_rsd, Nthread = nthread)
         
+        # Check that the number density of the populated halos is close to the target number density
+        expected_n = self.data_params['tracer_density_mean'][self.tracer]
+        actual_n = len(self.cubic_dict['LRG']['x']) / self.boxsize**3
+        std_n = self.data_params['tracer_density_std'][self.tracer]
+        
+        if abs(expected_n - actual_n) > std_n :
+            warn(f'The number density of the populated halos ({actual_n}) is not close to the target number density ({expected_n}).', UserWarning) 
+                 
         return self.cubic_dict
     
     
@@ -718,6 +726,7 @@ class CorrHOD():
         phase = sim_name.split('_')[-1].split('c')[-1] # Get the phase number by splitting the name of the simulation
         
         # TODO : Check that the dicts exist before saving them...
+        # TODO : Create the directories if they don't exist
         
         
         if save_HOD or save_all:
