@@ -672,7 +672,6 @@ class CorrHOD():
              path:str = None,
              save_HOD:bool = True,
              save_cubic:bool = True,
-             save_cutsky:bool = True,
              save_density:bool = True,
              save_quantiles:bool = True,
              save_CF:bool = True,
@@ -699,10 +698,6 @@ class CorrHOD():
         save_cubic : bool, optional
             If True, the cubic dictionary is saved. 
             File saved as `cubic_hod{hod_indice}_c{cosmo}_p{phase}.npy`. Defaults to True.
-            
-        save_cutsky : bool, optional
-            If True, the cutsky dictionary is saved. 
-            File saved as `c{cosmo}_p{phase}_cutsky.npy`. Defaults to True.
             
         save_density : bool, optional
             If True, the density PDF is saved. 
@@ -755,6 +750,7 @@ class CorrHOD():
             path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
             np.save(path / base_name, self.HOD_params)
         
+        # TODO : Change cubic to positions and remove the subdirectory cubic (save it in data directly)
         if save_cubic or (save_all and hasattr(self, 'cubic_dict')):
             # Pass if the cubic dictionary has not been computed yet
             if not hasattr(self, 'cubic_dict'):
@@ -763,11 +759,6 @@ class CorrHOD():
             path = output_dir / 'cubic'
             path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
             np.save(path / f'cubic_' + base_name, self.cubic_dict)
-        
-        if save_cutsky or (save_all and hasattr(self, 'cutsky_dict')):
-            path = output_dir / 'cutsky'
-            path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
-            # np.save(path / f'c{cosmo}_p{phase}_cutsky.npy', self.cutsky_dict)
                     
         if save_density or (save_all and hasattr(self, 'density')):
             path = output_dir / 'ds' / 'density'
@@ -1026,7 +1017,6 @@ class CorrHOD():
             'path': path,
             'save_HOD': False,
             'save_cubic': False,
-            'save_cutsky': False,
             'save_density': False,
             'save_quantiles': False,
             'save_CF': False,
