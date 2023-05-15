@@ -1,4 +1,4 @@
-import yaml
+import yaml, logging, sys
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -15,7 +15,7 @@ from densitysplit.cosmology import Cosmology
 from mockfactory import setup_logging
 from pycorr import TwoPointCorrelationFunction, project_to_multipoles
 
-from utils import apply_rsd
+from CorrHOD.utils import apply_rsd, create_logger
 
 class CorrHOD():
     """
@@ -292,11 +292,12 @@ class CorrHOD():
     
     def compute_DensitySplit(self,
                              smooth_radius:float = 10,
-                             cellsize:float = 10,
+                             cellsize:float = 5,
                              nquantiles:int = 10,
                              sampling:str = 'randoms',
                              filter_shape:str = 'Gaussian',
-                             return_density:bool = True):
+                             return_density:bool = True,
+                             nthreads=16):
         """
         Compute the density field and the quantiles using DensitySplit.
         (see https://github.com/epaillas/densitysplit for more details)
@@ -329,16 +330,34 @@ class CorrHOD():
         quantiles : np.ndarray
             The quantiles. It is a (nquantiles,N,3) array. 
         """
-        
+        logger = logging.getLogger('DS') #tmp
+        logger.debug('compute_DensitySplit function launched') #tmp
         # Get the positions of the galaxies
         if not hasattr(self, 'data_positions'):
             self.get_tracer_positions()
         
-        # Initialize the DensitySplit object
-        ds = DensitySplit(data_positions=self.data_positions, boxsize=self.boxsize)
+        # Initialize the DensitySplit object and compute the density field
+        try : #Main branch
+            ds = DensitySplit(data_positions=self.data_positions, boxsize=self.boxsize)
+
+            self.density = ds.get_density_mesh(smooth_radius=smooth_radius, cellsize=cellsize, sampling=sampling, filter_shape=filter_shape)
+        except : #OpenMP branch (an error will be raised because the OpenMP branch used differently)
+            ds = DensitySplit(data_positions=self.data_positions, 
+                              boxsize=self.boxsize, 
+                              boxcenter=self.boxsize/2,
+                              cellsize=cellsize,
+                              nthreads=16)
+            
+            if sampling == 'randoms':
+                # Sample the positions on random points that we have to create in that branch
+                sampling_positions = np.random.uniform(0, self.boxsize, (nquantiles * len(self.data_positions), 3))
+            elif sampling == 'data':
+                sampling_positions = self.data_positions
+            else:
+                raise ValueError('The sampling parameter must be either "randoms" or "data"')
+            
+            self.density = ds.get_density_mesh(sampling_positions=sampling_positions, smoothing_radius=smooth_radius)
         
-        # Compute the density field and the quantiles
-        self.density = ds.get_density_mesh(smooth_radius=smooth_radius, cellsize=cellsize, sampling=sampling, filter_shape=filter_shape)
         self.quantiles = ds.get_quantiles(nquantiles=nquantiles)
 
         if return_density:
@@ -404,7 +423,6 @@ class CorrHOD():
             self.CF[self.los]['Auto'] = {}
         
         # Compute the 2pcf
-        setup_logging()
         xi_quantile = TwoPointCorrelationFunction(mode, edges,
                                                   data_positions1=quantile_positions,
                                                   boxsize=self.boxsize,
@@ -486,7 +504,6 @@ class CorrHOD():
             self.CF[self.los]['Cross'] = {}
         
         # Compute the 2pcf
-        setup_logging()
         xi_quantile = TwoPointCorrelationFunction(mode, edges,
                                                   data_positions1=quantile_positions,
                                                   data_positions2=self.data_positions,
@@ -556,7 +573,6 @@ class CorrHOD():
             self.CF[self.los]['2PCF'] = {}
     
         # Compute the 2pcf
-        setup_logging()
         xi = TwoPointCorrelationFunction(mode, edges, 
                                          data_positions1 = self.data_positions, 
                                          boxsize = self.boxsize, 
@@ -704,7 +720,7 @@ class CorrHOD():
             Each dictionnary contains `DS{quantile}` keys with the CF of the quantile. The `s` key contains the separation bins.
             Defaults to True.
             
-        save_los : str, optional
+        los : str, optional
             The line of sight along which to save the 2PCF, the autocorrelation and cross-correlation of the quantiles. 
             Can be 'x', 'y', 'z' or 'average'. Defaults to 'average'.
             
@@ -727,6 +743,9 @@ class CorrHOD():
         # Get the HOD indice in the right format (same as the cosmology and phase)
         hod_indice = f'{hod_indice:03d}'
         
+        # define the base name of the files
+        base_name = f'hod{hod_indice}_{los}_c{cosmo}_p{phase}.npy'
+        
         # Note : If the user explicitly wants to save somethig, it is assumed that it has been computed before.
         # No error is explicitly raised if the user tries to save something that has not been computed yet.
         # If the user wants to save everything, the results are saved only if they exist.
@@ -734,7 +753,7 @@ class CorrHOD():
         if save_HOD or (save_all and hasattr(self, 'HOD_params')):
             path = output_dir / 'hod' 
             path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
-            np.save(path / f'hod{hod_indice}_c{cosmo}_p{phase}.npy', self.HOD_params)
+            np.save(path / base_name, self.HOD_params)
         
         if save_cubic or (save_all and hasattr(self, 'cubic_dict')):
             # Pass if the cubic dictionary has not been computed yet
@@ -743,7 +762,7 @@ class CorrHOD():
                 pass
             path = output_dir / 'cubic'
             path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
-            np.save(path / f'cubic_hod{hod_indice}_c{cosmo}_p{phase}.npy', self.cubic_dict)
+            np.save(path / f'cubic_' + base_name, self.cubic_dict)
         
         if save_cutsky or (save_all and hasattr(self, 'cutsky_dict')):
             path = output_dir / 'cutsky'
@@ -753,12 +772,12 @@ class CorrHOD():
         if save_density or (save_all and hasattr(self, 'density')):
             path = output_dir / 'ds' / 'density'
             path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
-            np.save(path / f'density_hod{hod_indice}_c{cosmo}_p{phase}.npy', self.density)
+            np.save(path / f'density_' + base_name, self.density)
         
         if save_quantiles or (save_all and hasattr(self, 'quantiles')):
             path = output_dir / 'ds' / 'quantiles'
             path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
-            np.save(path / f'quantiles_hod{hod_indice}_c{cosmo}_p{phase}.npy', self.quantiles)
+            np.save(path / f'quantiles_' + base_name, self.quantiles)
         
         if save_CF or (save_all and hasattr(self, 'CF')):
             
@@ -776,28 +795,27 @@ class CorrHOD():
             
                 path = output_dir / 'tpcf'
                 path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
-                np.save(path / f'tpcf_hod{hod_indice}_c{cosmo}_p{phase}.npy', tpcf_dict)
+                np.save(path / f'tpcf_' + base_name, tpcf_dict)
             
             if 'Auto' in self.CF[los].keys():
                 auto_dict = {'s': self.CF[los]['s'], **self.CF[los]['Auto']}
                 
                 path = output_dir / 'ds' / 'gaussian'
                 path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
-                np.save(path / f'ds_auto_hod{hod_indice}_c{cosmo}_p{phase}.npy', auto_dict)
+                np.save(path / f'ds_auto_' + base_name, auto_dict)
             
             if 'Cross' in self.CF[los].keys():
                 cross_dict = {'s': self.CF[los]['s'], **self.CF[los]['Cross']}
                 path = output_dir / 'ds' / 'gaussian'
                 path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
-                np.save(path / f'ds_cross_hod{hod_indice}_c{cosmo}_p{phase}.npy', cross_dict)
+                np.save(path / f'ds_cross_' + base_name, cross_dict)
         
         
     def run_all(self,
                 los_to_compute='average',
-                display_times:bool = False,
                 # Parameters for the DensitySplit
                 smooth_radius:float = 10,
-                cellsize:float = 10,
+                cellsize:float = 5,
                 nquantiles:int = 10,
                 sampling:str = 'randoms',
                 filter_shape:str = 'Gaussian',
@@ -816,16 +834,14 @@ class CorrHOD():
         
         Note that the **kwargs are used to set the parameters of the save function. If nothing is provided, nothing will be saved.
         See the documentation of the save function for more details.
+        
+        Times will be saved in the `times_dict` attribute of the CorrHOD object and displayed in the logs.
 
         Parameters
         ----------
         los_to_compute : str, optional
             The line of sight along which to compute the 2PCF, the autocorrelation and cross-correlation of the quantiles.
             If set to 'average', the 2PCF, the autocorrelation and cross-correlation of the quantiles will be averaged on the three lines of sight. Defaults to 'average'.
-        
-        display_times : bool, optional
-            If True, the times taken by each step will be displayed. Defaults to False.
-            Times will also be saved in the `times_dict` attribute of the CorrHOD object.
             
         smooth_radius : float, optional
             The radius of the Gaussian smoothing in Mpc/h used in the densitysplit. 
@@ -870,104 +886,139 @@ class CorrHOD():
             The parameters to pass to the save function. See the documentation of the save function for more details.
             If nothing is provided, nothing will be saved.
         """
-
-        # TODO : Handle MPI
-        # TODO : Change outputs from print to logging to have a better control of the outputs
+        
+        logger = logging.getLogger('CorrHOD') # Get the logger for the CorrHOD class
+        
+        # Get the MPI communicator and rank
+        if mpicomm is not None and mpiroot is not None:
+            size = mpicomm.size # Number of processes
+            rank = mpicomm.Get_rank() # Rank of the current process z(root process has rank 0)
+            root = (rank == mpiroot) # True if the current process is the root process
+        else:
+            root = True
+            rank = 0
         
         if los_to_compute=='average':
             los_list = ['x', 'y', 'z']
         else:
             los_list = [los_to_compute]
         
+        # The Barrier and bcast method can only be called if the communicator is not None
+        if mpicomm is not None:
+            mpicomm.Barrier() # Wait for all the processes to reach this point before starting
         start_time = time()
         self.times_dict = {} # Saving the times taken by each step in a dict to call them later if needed
         
-        print(f'Running CorrHOD with the following parameters ({hod_indice}) :')
-        print('Simulation :', self.sim_params['sim_name'])
-        for key in self.HOD_params.keys():
-            print(f'{key} : {self.HOD_params[key]}')
-        print(f"Number density : {self.data_params['tracer_density_mean'][self.tracer]:.2e} h^3/Mpc^3")
-        print('')
+        if root:
+            logger.info(f'Running CorrHOD with the following parameters ({hod_indice}) :')
+            logger.info(f"\t Simulation : {self.sim_params['sim_name']}")
+            for key in self.HOD_params.keys():
+                logger.info(f'\t {key} : {self.HOD_params[key]}')
+            logger.info(f"\t Number density : {self.data_params['tracer_density_mean'][self.tracer]:.2e} h^3/Mpc^3")
+            logger.newline()
         
-        print('Initializing and populating the halos ...')
-        self.initialize_halo() # Initialize the halo
+            logger.info('Initializing and populating the halos ...')
+            self.initialize_halo() # Initialize the halo
         
-        self.times_dict['initialize_halo'] = time()-start_time
-        if display_times:
-            print(f"Initialized the halos in {self.times_dict['initialize_halo']:.2f} s\n")
+            self.times_dict['initialize_halo'] = time()-start_time
+            logger.info(f"Initialized the halos in {self.times_dict['initialize_halo']:.2f} s\n")
         
+            self.populate_halos() # Populate the halos
         
-        self.populate_halos() # Populate the halos
-        
-        print('') # Just to add a space because populate_halos has a built-in print I can't remove
-    
-        # here, we run all the CF computations for each los given in los_to_compute.
+            logger.newline() # Just to add a space because populate_halos has a built-in print I can't remove
+        else:
+            self.Ball = None
+            self.cubic_dict = None
+
+        # Here, we run all the CF computations for each los given in los_to_compute.
         # We will then average the results on the lines of sight if needed
         for los in los_list:
-                     
+            
             los_time = time()
             self.times_dict[los] = {} # Initialize the dict for the times taken by each step for this los
             
-            print(f'Computing along the {los} line of sight ...')
             self.los = los # Reassign the los we will work on
             
-            self.get_tracer_positions() # Get the positions of the galaxies with RSD on the line of sight
+            if root:
+                logger.info(f'Computing along the {los} line of sight ...')
+                logger.newline()
+                
+                self.get_tracer_positions() # Get the positions of the galaxies with RSD on the line of sight
+            else:
+                self.data_positions = None
             
-            # Compute the DensitySplit
-            print('Computing the DensitySplit ...')
-            tmp_time = time()
-            self.compute_DensitySplit(smooth_radius=smooth_radius, 
-                                      cellsize=cellsize, 
-                                      nquantiles=nquantiles,
-                                      sampling=sampling, 
-                                      filter_shape=filter_shape,
-                                      return_density=False)
+            if mpicomm is not None:
+                self.data_positions = mpicomm.bcast(self.data_positions, root=mpiroot) # Broadcast the positions of the galaxies to all the processes
             
-            self.times_dict[los]['compute_DensitySplit'] = time()-tmp_time
-            if display_times:
-                print(f"Computed the DensitySplit in {self.times_dict[los]['compute_DensitySplit']:.2f} s\n")
+            if rank == 1:
+                logger.debug(f'(Broadcast test) Number of galaxies : {len(self.data_positions)} on rank {rank}')
+                logger.newline()
+            
+            if root : 
+                # Compute the DensitySplit
+                logger.info('Computing the DensitySplit ...')
+                tmp_time = time()
+                self.compute_DensitySplit(smooth_radius=smooth_radius, 
+                                          cellsize=cellsize, 
+                                          nquantiles=nquantiles,
+                                          sampling=sampling, 
+                                          filter_shape=filter_shape,
+                                          return_density=False)
+                
+                self.times_dict[los]['compute_DensitySplit'] = time()-tmp_time
+                logger.info(f"Computed the DensitySplit in {self.times_dict[los]['compute_DensitySplit']:.2f} s\n")
+            else:
+                self.density = None
+                self.quantiles = None
+            
+            if mpicomm is not None:
+                self.quantiles = mpicomm.bcast(self.quantiles, root=mpiroot) # Broadcast the quantiles to all the processes
             
             # Compute the 2PCF
-            print('Computing the 2PCF ...')
+            if root : 
+                logger.info('Computing the 2PCF ...')
             tmp_time = time()
             self.compute_2pcf(edges=edges, mpicomm=mpicomm, mpiroot=mpiroot, nthread=nthread)
             
             self.times_dict[los]['compute_2pcf'] = time()-tmp_time
-            if display_times:
-                print(f"Computed the 2PCF in {self.times_dict[los]['compute_2pcf']:.2f} s\n")
+            if root:
+                logger.info(f"Computed the 2PCF in {self.times_dict[los]['compute_2pcf']:.2f} s\n")
             
             # For each quantile, compute the autocorrelation and cross-correlation
             self.times_dict[los]['compute_auto_corr'] = {}
             self.times_dict[los]['compute_cross_corr'] = {}
             
             for quantile in range(nquantiles):
-                print(f'Computing the auto-correlation and cross-correlation of quantile {quantile} ...')
+                if root:
+                    logger.info(f'Computing the auto-correlation and cross-correlation of quantile {quantile} ...')
                 tmp_time = time()
                 self.compute_auto_corr(quantile, edges=edges,mpicomm=mpicomm, mpiroot=mpiroot, nthread=nthread)
                 
                 self.times_dict[los]['compute_auto_corr'][f'DS{quantile}'] = time()-tmp_time
-                if display_times:
-                    print(f"Computed the auto-correlation of quantile {quantile} in {self.times_dict[los]['compute_auto_corr'][f'DS{quantile}']:.2f} s")
+                if root:
+                    logger.info(f"Computed the auto-correlation of quantile {quantile} in {self.times_dict[los]['compute_auto_corr'][f'DS{quantile}']:.2f} s")
                 
                 tmp_time = time()
                 self.compute_cross_corr(quantile, edges=edges,mpicomm=mpicomm, mpiroot=mpiroot, nthread=nthread)
                 
                 self.times_dict[los]['compute_cross_corr'][f'DS{quantile}'] = time()-tmp_time
-                if display_times:
-                    print(f"Computed the cross-correlation of quantile {quantile} in {self.times_dict[los]['compute_cross_corr'][f'DS{quantile}']:.2f} s")
-            
-            print('')
+                if root:
+                    logger.info(f"Computed the cross-correlation of quantile {quantile} in {self.times_dict[los]['compute_cross_corr'][f'DS{quantile}']:.2f} s")
             
             self.times_dict[los]['run_los'] = time()-los_time
-            if display_times:
-                print(f"Ran los '{los}' in {self.times_dict[los]['run_los']:.2f} s\n")
-            
-        # Average the 2PCF, autocorrelation and cross-correlation of the quantiles on the lines of sight  
-        self.average_CF(average_on=los_list) 
+            if root:
+                logger.newline()
+                logger.info(f"Ran los '{los}' in {self.times_dict[los]['run_los']:.2f} s\n")
         
+        if root: 
+            # Average the 2PCF, autocorrelation and cross-correlation of the quantiles on the lines of sight  
+            self.average_CF(average_on=los_list) 
+        
+        if mpicomm is not None:
+            mpicomm.Barrier() # Wait for all the processes to reach this point before ending the timer
         self.times_dict['run_all'] = time()-start_time
-        if display_times:
-            print(f"Run_all in {self.times_dict['run_all']:.2f} s")
+        if root:
+            logger.info(f"Run_all in {self.times_dict['run_all']:.2f} s")
         
         # Here, we define the arguments to pass to the save function by default (nothing will be saved)
         save_args = {
@@ -989,10 +1040,9 @@ class CorrHOD():
                 # If the argument is not an argument of the save function, we warn the user
                 warn(f'Unknown argument {key}={value} in run_all. It will be ignored.', UserWarning)
         
-        self.save(**save_args) # Save the results
+        if root:
+            self.save(**save_args) # Save the results
     
     
 # Utils and scripts outside the class
     # TODO : Function to compile the saved CFs as a dictionary (with the right format) for sunbird
-    
-    # TODO : Script to prepare the simulation if needed

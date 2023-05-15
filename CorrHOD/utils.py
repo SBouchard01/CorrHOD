@@ -1,4 +1,6 @@
 import numpy as np
+from os.path import exists
+from pathlib import Path
 from warnings import warn
 
 def apply_rsd(data, boxsize, redshift, cosmo, tracer='LRG', los = 'z'):
@@ -49,7 +51,7 @@ def apply_rsd(data, boxsize, redshift, cosmo, tracer='LRG', los = 'z'):
     vy = data['vy']
     vz = data['vz']
     
-    # Get the positions (Add boxsize/2 to center the box at 0)
+    # Get the positions (Add boxsize/2 to center the box at boxsize/2)
     x = data['x'] + boxsize / 2
     y = data['y'] + boxsize / 2
     z = data['z'] + boxsize / 2
@@ -112,6 +114,7 @@ def array_to_dict(array, is_log_sigma=False):
     return hod_dict
 
 
+
 def dict_to_array(dic:dict):
     """
     Converts a dictionary of HOD parameters into an array of values
@@ -141,3 +144,148 @@ def dict_to_array(dic:dict):
     ])
     
     return array
+
+
+
+def format_HOD_CFs(path:str,
+                   cosmo:int=0,
+                   phase:int=0,
+                   HOD_start:int=0,
+                   HOD_number:int=1,
+                   merge_2PCF:bool=True,
+                   merge_DS_auto:bool=True,
+                   merge_ds_cross:bool=True):
+    
+    path = Path(path)
+    cosmo = f'{cosmo:03d}'
+    phase = f'{phase:03d}'
+    
+    # Check that HOD_number is bigger than 0
+    if HOD_number < 1:
+        raise ValueError('HOD_number must be bigger than 0')
+    
+    # Initialize the dictionaries
+    tpcf_dict = {}
+    tpcf_poles = []
+    ds_auto_dict = {}
+    ds_cross_dict = {}
+    
+    # Loop over the HODs
+    for i in range(HOD_start, HOD_start + HOD_number):
+        hod_indice = f'{i:03d}'
+        
+        # Loop over the LOS
+        for los in ['x', 'y', 'z']:
+        
+            base_name = f'hod{hod_indice}_{los}_c{cosmo}_p{phase}.npy'
+            
+            # Get the 2PCF path
+            path = path / 'tpcf'
+            filename = f'tpcf_' + base_name
+            if merge_2PCF and exists(path / filename):
+                # Load the 2PCF
+                dic = np.load(path / f'2PCF_{hod_indice}.npy').item()
+            
+                if 's' not in tpcf_dict.keys():
+                    # Initialize the dictionary
+                    tpcf_dict['s'] = dic['s']
+                    tpcf_poles.append(dic['2PCF'])
+                elif not np.array_equal(tpcf_dict['s'], dic['s']):
+                    raise ValueError(f'The separation bins are not equal. Impossible to merge the {i}th 2PCF.')
+                
+                
+
+
+
+
+
+
+
+       
+#%% Logging utils
+import sys
+import logging
+import types
+
+def log_newline(self, how_many_lines=1):
+    """
+    Add a blank to the logger. 
+    Accessed as a method of the logger object with `types.MethodType(log_newline, logger)`
+    """
+    # From https://stackoverflow.com/a/45032701
+    
+    # Switch formatter, output a blank line
+    self.handler.setFormatter(self.blank_formatter)
+
+    for i in range(how_many_lines):
+        self.info('')
+
+    # Switch back
+    self.handler.setFormatter(self.formatter)
+
+def create_logger(name:str,
+                  level=logging.INFO, 
+                  stream=sys.stdout, 
+                  filename:str=None,
+                  filemode:str='w'): 
+    """
+    Will get or create the loger with the given name, and add a method to the logger object to output a blank line.
+    A handler is created, with the given level and stream (or file output).
+
+    Parameters
+    ----------
+    name : str
+        Name of the logger
+        
+    level : optional
+        Level of the logger and handler, by default logging.INFO
+        
+    stream : optional
+        Stream to which the logger will output, by default sys.stdout
+        
+    filename : str, optional
+        Path to the file to which the logger will output, by default None
+        
+    filemode : str, optional
+        Mode to open the file, by default 'w'
+
+    Returns
+    -------
+    logger : logging.Logger 
+        Logger object 
+    """
+    # From https://stackoverflow.com/a/45032701 
+    
+    if isinstance(level, str):
+        level = {'info': logging.INFO, 'debug': logging.DEBUG, 'warning': logging.WARNING}[level.lower()]
+    
+    # Create a handler
+    if filename is not None:
+        path = Path(filename).parent[0] # Get the path to the directory containing the file
+        path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
+        handler = logging.FileHandler(filename, mode=filemode)
+    else:
+        handler = logging.StreamHandler(stream=stream)
+    handler.setLevel(level)
+    
+    # Create formatter and add it to the handler
+    formatter = logging.Formatter(fmt="%(message)s")   
+    blank_formatter = logging.Formatter(fmt="")
+    handler.setFormatter(formatter)
+
+    # Create a logger, with the previously-defined handler
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.DEBUG)
+    # Remove all handlers already associated with the logger object
+    for hd in logger.handlers:
+        logger.removeHandler(hd)
+    logger.propagate = False # Prevent the logs from being propagated to the root logger that will have different handlers
+    logger.addHandler(handler) # Add the handler to the logger
+
+    # Save some data and add a method to logger object
+    logger.handler = handler
+    logger.formatter = formatter
+    logger.blank_formatter = blank_formatter
+    logger.newline = types.MethodType(log_newline, logger)
+    
+    return logger
