@@ -285,7 +285,7 @@ class CorrHOD():
     
     
     
-    # TODO : Compute the cutsky, randoms, weights
+    # TODO : Compute the cutsky, randoms, weights (New class maybe ? New branch for sure !)
     # TODO : Add the option to use the cutsky in the functions
     
     
@@ -892,7 +892,7 @@ class CorrHOD():
         # Get the MPI communicator and rank
         if mpicomm is not None and mpiroot is not None:
             size = mpicomm.size # Number of processes
-            rank = mpicomm.Get_rank() # Rank of the current process z(root process has rank 0)
+            rank = mpicomm.Get_rank() # Rank of the current process (root process has rank 0)
             root = (rank == mpiroot) # True if the current process is the root process
         else:
             root = True
@@ -1030,6 +1030,7 @@ class CorrHOD():
             'save_density': False,
             'save_quantiles': False,
             'save_CF': False,
+            'los': 'average', # We save the averaged CFs by default
             'save_all': False
         }
         # We update the arguments with the kwargs provided by the user
@@ -1040,9 +1041,13 @@ class CorrHOD():
                 # If the argument is not an argument of the save function, we warn the user
                 warn(f'Unknown argument {key}={value} in run_all. It will be ignored.', UserWarning)
         
+        # Save the results
         if root:
-            self.save(**save_args) # Save the results
-    
-    
-# Utils and scripts outside the class
-    # TODO : Function to compile the saved CFs as a dictionary (with the right format) for sunbird
+            if save_args['los']=='all':
+                del save_args['los'] # We will manually save the results for each los
+                self.save(los='average', **save_args) 
+                self.save(los='x', **save_args)
+                self.save(los='y', **save_args)
+                self.save(los='z', **save_args)
+            else:
+                self.save(**save_args)
