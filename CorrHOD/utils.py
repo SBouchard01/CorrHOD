@@ -146,17 +146,82 @@ def dict_to_array(dic:dict):
     return array
 
 
-# TODO : Function to compile the saved CFs as a dictionary (with the right format) for sunbird
+
 def format_HOD_CFs(path:str,
+                   output_dir:str,
                    cosmo:int=0,
                    phase:int=0,
                    HOD_start:int=0,
                    HOD_number:int=1,
+                   nquantiles=10,
+                   smoothing_filter:str='gaussian',
+                   smoothing_radius:float=10,
                    merge_2PCF:bool=True,
                    merge_DS_auto:bool=True,
                    merge_DS_cross:bool=True):
+    """
+    Creates a dictionary of the CFs from the saved files.
+    This should bring all the files in the same format as the one used by Sunbird.
+    
+    It will return for each CF, one file per cosmology and phase, with the following format:
+    * `s`: array of separation bins
+    * `multipoles`: array of shape (HOD_number, los_number(3), nquantiles, npoles(3), sep_bin_number)	
+    
+    The name of the file is : 
+    * `tpcf_c{cosmo}_p{phase}.npy` for the 2PCF
+    * `ds_auto_zsplit_Rs{smoothing_radius}_c{cosmo}_p{phase}.npy` for the DS auto (zsplit because the density is split in redshift space)
+
+    Note that it is assumed that the files that we want to merge are all exist, and are respectively in a directory named `tpcf` and `ds/{smoothing_filter}` from the given path.
+    An error will be raised if any of the files is missing.
+    
+    It is also assumed that the separation bins are the same for all the files (tpcf, cross and auto). A check is done to verify that.
+
+    Parameters
+    ----------
+    path : str
+        Path to the directory containing the saved files
+        
+    output_dir : str
+        Path to the directory where the formatted files will be saved
+        
+    cosmo : int, optional
+        Cosmology number, same as the one used in AbacusSummit. Defaults to 0
+        
+    phase : int, optional
+        Phase number, same as the one used in AbacusSummit. Defaults to 0
+        
+    HOD_start : int, optional
+        HOD number to start from. Defaults to 0
+        
+    HOD_number : int, optional
+        Number of HODs to merge. Defaults to 1
+        
+    nquantiles : int, optional
+        Number of quantiles used to split the sample. Defaults to 10
+        
+    smoothing_filter : str, optional
+        Smoothing filter used to compute the DensitySplit (see https://github.com/epaillas/densitysplit for more details).
+        Defaults to 'gaussian'
+        
+    smoothing_radius : float, optional
+        Smoothing radius used to compute the DensitySplit (see https://github.com/epaillas/densitysplit for more details).
+        Defaults to 10
+        
+    merge_2PCF : bool, optional
+        Whether to merge the 2PCF files. Defaults to True
+        
+    merge_DS_auto : bool, optional
+        Whether to merge the quantiles auto-correlation files. Defaults to True
+        
+    merge_DS_cross : bool, optional
+        Whether to merge the quantiles cross-correlation files. Defaults to True
+    """
+    
+    # Note : We consider that the files that we want to merge must all exist in the same directory
+    # We also consider than the separation bins are the same for all the files (tpcf, cross and auto) ! A check is done to verify that.
     
     path = Path(path)
+    output_dir = Path(output_dir)
     cosmo = f'{cosmo:03d}'
     phase = f'{phase:03d}'
     
@@ -164,42 +229,93 @@ def format_HOD_CFs(path:str,
     if HOD_number < 1:
         raise ValueError('HOD_number must be bigger than 0')
     
-    # Initialize the dictionaries
-    tpcf_dict = {}
-    tpcf_poles = []
-    ds_auto_dict = {}
-    ds_cross_dict = {}
+    # Path to the directories containing the files
+    tpcf_path = path / 'tpcf'
+    ds_path = path / 'ds' / smoothing_filter 
+    
+    # Load the fisrt file to get the separation bins length
+    dic = np.load(tpcf_path / f'tpcf_hod{HOD_start:03d}_x_c{cosmo}_p{phase}.npy').item()
+    s = dic['s']
+    # The number of poles should be 3, but just to be sure : 
+    npoles = dic['2PCF'].shape[0]
+    
+    # Initialize the dictionaries with arrays of size (HOD_number, los_number, nquantiles, npoles, sep_bin_number) for the poles
+    tpcf_dict = {
+        's': s, 
+        'multipoles':np.empty((HOD_number, 3, npoles, len(s))) # No nquantiles dimension here since it's the 2PCF
+        }
+    ds_auto_dict = {
+        's': s, 
+        'multipoles':np.empty((HOD_number, 3, nquantiles, npoles, len(s)))
+        }
+    ds_cross_dict = {
+        's': s, 
+        'multipoles':np.empty((HOD_number, 3, nquantiles, npoles, len(s)))
+        }
     
     # Loop over the HODs
     for i in range(HOD_start, HOD_start + HOD_number):
         hod_indice = f'{i:03d}'
         
         # Loop over the LOS
-        for los in ['x', 'y', 'z']:
+        for los_indice, los in enumerate(['x', 'y', 'z']):
         
             base_name = f'hod{hod_indice}_{los}_c{cosmo}_p{phase}.npy'
             
             # Get the 2PCF path
-            path = path / 'tpcf'
             filename = f'tpcf_' + base_name
-            if merge_2PCF and exists(path / filename):
-                # Load the 2PCF
-                dic = np.load(path / f'2PCF_{hod_indice}.npy').item()
+            if merge_2PCF:
+                dic = np.load(tpcf_path / filename).item() # Load the CF
             
-                if 's' not in tpcf_dict.keys():
-                    # Initialize the dictionary
-                    tpcf_dict['s'] = dic['s']
-                    tpcf_poles.append(dic['2PCF'])
-                elif not np.array_equal(tpcf_dict['s'], dic['s']):
+                # Check that the separation bins are the same
+                if not np.array_equal(tpcf_dict['s'], dic['s']):
                     raise ValueError(f'The separation bins are not equal. Impossible to merge the {i}th 2PCF.')
+            
+                # Add the 2PCF to the dictionary at the right place
+                tpcf_dict['multipoles'][hod_indice, los_indice, :, :] = dic['2PCF']
+            
+            # Get the DS auto path
+            filename = f'ds_auto_' + base_name
+            if merge_DS_auto:
+                dic = np.load(ds_path / filename).item()
+            
+                # Check that the separation bins are the same
+                if not np.array_equal(ds_auto_dict['s'], dic['s']):
+                    raise ValueError(f'The separation bins are not equal. Impossible to merge the {i}th DS auto.')
+
+                # Loop over the quantiles
+                for quantile_indice in range(nquantiles):
+                    # Add the DS auto to the dictionary at the right place
+                    ds_auto_dict['multipoles'][hod_indice, los_indice, quantile_indice, :, :] = dic[f'DS{quantile_indice}']
+
+            # Get the DS cross path
+            filename = f'ds_cross_' + base_name
+            if merge_DS_cross:
+                dic = np.load(ds_path / filename).item()
+            
+                # Check that the separation bins are the same
+                if not np.array_equal(ds_cross_dict['s'], dic['s']):
+                    raise ValueError(f'The separation bins are not equal. Impossible to merge the {i}th DS cross.')
+
+                # Loop over the quantiles
+                for quantile_indice in range(nquantiles):
+                    # Add the DS cross to the dictionary at the right place
+                    ds_cross_dict['multipoles'][hod_indice, los_indice, quantile_indice, :, :] = dic[f'DS{quantile_indice}']
                 
-                
 
-
-
-
-
-
+    # Save the dictionaries
+    path = output_dir / 'tpcf'
+    path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
+    if merge_2PCF:
+        np.save(path / f'tpcf_c{cosmo}_p{phase}.npy', tpcf_dict)
+    
+    base_name = f'zsplit_Rs{smoothing_radius}_c{cosmo}_p{phase}.npy'
+    path = output_dir / 'ds' / smoothing_filter
+    path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
+    if merge_DS_auto:
+        np.save(path / f'ds_auto_' + base_name, ds_auto_dict)
+    if merge_DS_cross:
+        np.save(path / f'ds_cross_' + base_name, ds_cross_dict)
 
        
 #%% Logging utils
@@ -239,19 +355,20 @@ def create_logger(name:str,
         Name of the logger
         
     level : optional
-        Level of the logger and handler, by default logging.INFO
+        Level of the logger and handler. Can be a string ('info', 'debug', 'warning') or a logging level (`logging.INFO`, `logging.DEBUG`, `logging.WARNING`).
+        Defaults to `logging.INFO`
         
     stream : optional
-        Stream to which the logger will output, by default sys.stdout
+        Stream to which the logger will output. Defaults to sys.stdout
         
     filename : str, optional
-        Path to the file to which the logger will output, by default None
+        Path to the file to which the logger will output. Defaults to None
         
     filemode : str, optional
-        Mode to open the file, by default 'w'
+        Mode to open the file. Defaults to 'w'
         
     propagate : bool, optional
-        Whether to propagate the logs to the root logger, by default False
+        Whether to propagate the logs to the root logger. Defaults to False
         Warning : If sets to False, the logs will not be propagated to the root logger, and will not be output by the root logger. 
         If the root logger outputs to a file, the logs will not be saved in the file, unless the logger has the same output file.
         However, if propagate is True, the logs will be output twice if the root has a different handler (once by the logger, once by the root logger)
