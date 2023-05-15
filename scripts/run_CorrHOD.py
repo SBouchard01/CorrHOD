@@ -75,6 +75,7 @@ Object.run_all(los_to_compute=los,
                nquantiles=nquantiles,
                nthread=nthread,
                path = path,
+               los='all', # Save all the lines of sight, including the average
                save_all=True)
 
 
