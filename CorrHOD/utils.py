@@ -146,7 +146,7 @@ def dict_to_array(dic:dict):
     return array
 
 
-
+# TODO : Function to compile the saved CFs as a dictionary (with the right format) for sunbird
 def format_HOD_CFs(path:str,
                    cosmo:int=0,
                    phase:int=0,
@@ -154,7 +154,7 @@ def format_HOD_CFs(path:str,
                    HOD_number:int=1,
                    merge_2PCF:bool=True,
                    merge_DS_auto:bool=True,
-                   merge_ds_cross:bool=True):
+                   merge_DS_cross:bool=True):
     
     path = Path(path)
     cosmo = f'{cosmo:03d}'
@@ -227,7 +227,8 @@ def create_logger(name:str,
                   level=logging.INFO, 
                   stream=sys.stdout, 
                   filename:str=None,
-                  filemode:str='w'): 
+                  filemode:str='w',
+                  propagate=False): 
     """
     Will get or create the loger with the given name, and add a method to the logger object to output a blank line.
     A handler is created, with the given level and stream (or file output).
@@ -248,6 +249,12 @@ def create_logger(name:str,
         
     filemode : str, optional
         Mode to open the file, by default 'w'
+        
+    propagate : bool, optional
+        Whether to propagate the logs to the root logger, by default False
+        Warning : If sets to False, the logs will not be propagated to the root logger, and will not be output by the root logger. 
+        If the root logger outputs to a file, the logs will not be saved in the file, unless the logger has the same output file.
+        However, if propagate is True, the logs will be output twice if the root has a different handler (once by the logger, once by the root logger)
 
     Returns
     -------
@@ -279,7 +286,7 @@ def create_logger(name:str,
     # Remove all handlers already associated with the logger object
     for hd in logger.handlers:
         logger.removeHandler(hd)
-    logger.propagate = False # Prevent the logs from being propagated to the root logger that will have different handlers
+    logger.propagate = propagate # Prevent the logs from being propagated to the root logger that will have different handlers
     logger.addHandler(handler) # Add the handler to the logger
 
     # Save some data and add a method to logger object
