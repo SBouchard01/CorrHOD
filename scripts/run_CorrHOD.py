@@ -27,16 +27,16 @@ logger = create_logger('CorrHOD', level='debug', stream=sys.stdout)
 logger2 = create_logger('DS', level='debug', stream=sys.stdout) 
 
 ### MPI ###
-# from mpi4py import MPI
-# comm = MPI.COMM_WORLD
-# size = comm.size # Number of processes
-# rank = comm.Get_rank() # Rank of the current process (root process has rank 0)
-# root = 0
+from mpi4py import MPI
+comm = MPI.COMM_WORLD
+size = comm.size # Number of processes
+rank = comm.Get_rank() # Rank of the current process (root process has rank 0)
+root = 0
 
-comm = None
-root = None
-rank = 0
-size = 1
+# comm = None
+# root = None
+# rank = 0
+# size = 1
 
 # Get the number of threads available
 import multiprocessing
