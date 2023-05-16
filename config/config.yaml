@@ -1,0 +1,64 @@
+# Comment out the probes you don't need
+# CAREFUL: yaml is super sensitive to spaces - don't use tabs
+
+# Simulation parameters
+sim_params:
+    sim_name: 'AbacusSummit_base_c000_ph000'                                 # which simulation 
+    sim_dir: /global/cfs/cdirs/desi/cosmosim/Abacus
+    output_dir: './'                                                         # where to output galaxy mocks
+    subsample_dir: '/global/homes/s/sbouchar/Abacus_HOD/Tests/'                                            # where to output subsample data
+    z_mock: 0.2                                                              # which redshift slice
+    cleaned_halos: True                                                      # load cleaned halos?
+prepare_sim:
+    Nparallel_load: 3 # best for cori haswell node  
+
+# HOD parameters
+HOD_params:
+    use_particles: True
+    want_ranks: True               # want to implement satellite profile flexiblities?
+    want_AB: True                  # want assembly bias?
+    density_sigma: 3               # scale radius in Mpc / h for local density calculation
+    tracer_flags:                  # which tracer do we want?
+        LRG: True 
+        ELG: False
+        QSO: False
+    want_rsd: False                 # want RSD? 
+    write_to_disk: True
+
+    # default parameters
+    LRG_params:
+        logM_cut: 12.87
+        logM1: 14.06
+        sigma: 0.02083802
+        alpha: 1.15
+        kappa: 0.42
+        alpha_c: 0.22
+        alpha_s: 0.94
+        s: 0
+        s_v: 0
+        s_p: 0
+        s_r: 0
+        Acent: 0
+        Asat: 0
+        Bcent: 0
+        Bsat: 0
+        ic: 1.0
+
+# order of the parameters in your HOD parameter file
+fit_params:
+    logM_cut: [0, 'LRG']
+    logM1: [1, 'LRG']
+    sigma: [2, 'LRG']
+    alpha: [3,  'LRG']
+    kappa: [4, 'LRG']
+    alpha_c: [5, 'LRG']
+    alpha_s: [6, 'LRG']
+    Bcent: [7, 'LRG']
+    Bsat: [8, 'LRG']
+
+# number density of the sample you want to replicate
+data_params:
+    tracer_density_mean:
+        LRG: 0.001 #0.00045 # 3.0 # (mpc/h)^-3
+    tracer_density_std:
+        LRG: 3.0e-5 # (mpc/h)^-3
