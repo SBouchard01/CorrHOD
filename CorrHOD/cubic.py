@@ -75,8 +75,12 @@ class CorrHOD_cubic():
         # Read the config file
         config = yaml.safe_load(open(path2config))
         self.sim_params = config['sim_params']
-        self.data_params = config['data_params']
         self.config_HOD_params = config['HOD_params'] # Temporary HOD parameters from the config file of AbacusHOD
+        # Make data_params an optional parameter
+        if 'data_params' in config.keys():
+            self.data_params = config['data_params']
+        else:
+            self.data_params = None
         
         # Set the fixed parameters
         self.tracer = 'LRG' # Tracer to use for the HOD. Since this code is only for BGS, this is fixed but can be changed later by reassigning the parameter
@@ -98,7 +102,7 @@ class CorrHOD_cubic():
             raise ValueError(err)
     
     
-
+    
     def initialize_halo(self, nthread:int = 16):
         """
         Initializes the AbacusHOD object and loads the simulation.
@@ -126,7 +130,8 @@ class CorrHOD_cubic():
         self.Ball.tracers[self.tracer]['ic'] = 1 # Set the incompleteness to 1 by default
         ngal_dict = self.Ball.compute_ngal(Nthread = nthread)[0] # Compute the number of galaxies in the box
         N_trc = ngal_dict[self.tracer] # Get the number of galaxies of the tracer type in the box
-        self.Ball.tracers[self.tracer]['ic'] = min(1, self.data_params['tracer_density_mean'][self.tracer]*self.Ball.params['Lbox']**3/N_trc) # Compute the actual incompleteness
+        if self.data_params is not None:
+            self.Ball.tracers[self.tracer]['ic'] = min(1, self.data_params['tracer_density_mean'][self.tracer]*self.Ball.params['Lbox']**3/N_trc) # Compute the actual incompleteness
         
         return self.Ball
     
@@ -153,14 +158,19 @@ class CorrHOD_cubic():
         # Run the HOD and get the dictionary containing the HOD catalogue
         self.cubic_dict = self.Ball.run_hod(self.Ball.tracers, self.Ball.want_rsd, Nthread = nthread)
         
-        # Check that the number density of the populated halos is close to the target number density
-        expected_n = self.data_params['tracer_density_mean'][self.tracer]
+        # Log the number density of the populated halos
+        logger = logging.getLogger('CorrHOD') # Get the logger for the CorrHOD class
         actual_n = len(self.cubic_dict['LRG']['x']) / self.boxsize**3
-        std_n = self.data_params['tracer_density_std'][self.tracer]
+        logger.info(f'Number density of the populated halos : {actual_n:.3e}')
         
-        if abs(expected_n - actual_n) > std_n :
-            warn(f'The number density of the populated halos ({actual_n}) is not close to the target number density ({expected_n}).', UserWarning) 
-                 
+        # Check that the number density of the populated halos is close to the target number density
+        if self.data_params is not None:
+            expected_n = self.data_params['tracer_density_mean'][self.tracer]
+            std_n = self.data_params['tracer_density_std'][self.tracer]
+        
+            if abs(expected_n - actual_n) > std_n :
+                warn(f'The number density of the populated halos ({actual_n}) is not close to the target number density ({expected_n}).', UserWarning) 
+
         return self.cubic_dict
     
     
@@ -282,12 +292,7 @@ class CorrHOD_cubic():
         # Get the positions of the galaxies
         self.data_positions = np.c_[apply_rsd(self.cubic_dict, self.boxsize, self.redshift, self.cosmo, tracer=self.tracer, los=self.los)]
         
-        return self.data_positions
-    
-    
-    
-    # TODO : Compute the cutsky, randoms, weights (New class maybe ? New branch for sure !)
-    # TODO : Add the option to use the cutsky in the functions
+        return self.data_positions    
     
     
     
@@ -298,7 +303,7 @@ class CorrHOD_cubic():
                              sampling:str = 'randoms',
                              filter_shape:str = 'Gaussian',
                              return_density:bool = True,
-                             nthreads=16):
+                             nthread=16):
         """
         Compute the density field and the quantiles using DensitySplit.
         (see https://github.com/epaillas/densitysplit for more details)
@@ -347,7 +352,7 @@ class CorrHOD_cubic():
                               boxsize=self.boxsize, 
                               boxcenter=self.boxsize/2,
                               cellsize=cellsize,
-                              nthreads=16)
+                              nthreads=nthread)
             
             if sampling == 'randoms':
                 # Sample the positions on random points that we have to create in that branch
@@ -526,6 +531,7 @@ class CorrHOD_cubic():
         return xi_quantile
     
     
+    
     def compute_2pcf(self,  
                      mode:str = 'smu',
                      edges:list = [np.linspace(0.1, 200, 50), np.linspace(-1, 1, 60)],
@@ -668,6 +674,7 @@ class CorrHOD_cubic():
         return self.CF['average']
     
     
+    
     def save(self,
              hod_indice:int = 0,
              path:str = None,
@@ -802,6 +809,7 @@ class CorrHOD_cubic():
                 np.save(path / f'ds_cross_' / base_name, cross_dict)
         
         
+        
     def run_all(self,
                 los_to_compute='average',
                 # Parameters for the DensitySplit
@@ -905,7 +913,8 @@ class CorrHOD_cubic():
             logger.info(f"\t Simulation : {self.sim_params['sim_name']}")
             for key in self.HOD_params.keys():
                 logger.info(f'\t {key} : {self.HOD_params[key]}')
-            logger.info(f"\t Number density : {self.data_params['tracer_density_mean'][self.tracer]:.2e} h^3/Mpc^3")
+            if self.data_params is not None:
+                logger.info(f"\t Number density : {self.data_params['tracer_density_mean'][self.tracer]:.2e} h^3/Mpc^3")
             logger.newline()
         
             logger.info('Initializing and populating the halos ...')
