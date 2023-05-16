@@ -161,7 +161,7 @@ class CorrHOD_cubic():
         # Log the number density of the populated halos
         logger = logging.getLogger('CorrHOD') # Get the logger for the CorrHOD class
         actual_n = len(self.cubic_dict['LRG']['x']) / self.boxsize**3
-        logger.info(f'Number density of the populated halos : {actual_n:.3e}')
+        logger.debug(f'Number density of the populated halos : {actual_n:.3e} h^3/Mpc^3')
         
         # Check that the number density of the populated halos is close to the target number density
         if self.data_params is not None:
