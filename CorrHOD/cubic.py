@@ -17,7 +17,7 @@ from pycorr import TwoPointCorrelationFunction, project_to_multipoles
 
 from CorrHOD.utils import apply_rsd, create_logger
 
-# TODO : Change file name to cubic
+
 class CorrHOD_cubic():
     """
     This class is used to compute the 2PCF and the autocorrelation and cross-correlation of the quantiles of the DensitySplit.

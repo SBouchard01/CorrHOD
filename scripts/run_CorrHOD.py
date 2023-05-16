@@ -24,7 +24,7 @@ from pprint import pprint
 from mockfactory import setup_logging
 from CorrHOD.utils import create_logger
 
-from CorrHOD.pipeline import CorrHOD_cubic
+from CorrHOD.cubic import CorrHOD_cubic
 
 #%% Logging
 setup_logging() # Initialize the logging for all the loggers that will not have a handler 
