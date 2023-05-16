@@ -17,10 +17,11 @@ from pycorr import TwoPointCorrelationFunction, project_to_multipoles
 
 from CorrHOD.utils import apply_rsd, create_logger
 
-class CorrHOD():
+# TODO : Change file name to cubic
+class CorrHOD_cubic():
     """
     This class is used to compute the 2PCF and the autocorrelation and cross-correlation of the quantiles of the DensitySplit.
-    It takes HOD parameters and a cosmology as input and uses AbacusHOD to generate a mock.
+    It takes HOD parameters and a cosmology as input and uses AbacusHOD to generate a cubic mock.
     It then uses DensitySplit to compute the density field and the quantiles.
     Finally, it uses pycorr to compute the 2PCF and the autocorrelation and cross-correlation of the quantiles.
     """
@@ -671,7 +672,7 @@ class CorrHOD():
              hod_indice:int = 0,
              path:str = None,
              save_HOD:bool = True,
-             save_cubic:bool = True,
+             save_pos:bool = True,
              save_density:bool = True,
              save_quantiles:bool = True,
              save_CF:bool = True,
@@ -695,9 +696,9 @@ class CorrHOD():
             If True, the HOD parameters are saved. 
             File saved as `hod{hod_indice}_c{cosmo}_p{phase}.npy`. Defaults to True.
             
-        save_cubic : bool, optional
-            If True, the cubic dictionary is saved. 
-            File saved as `cubic_hod{hod_indice}_c{cosmo}_p{phase}.npy`. Defaults to True.
+        save_pos : bool, optional
+            If True, the cubic mock dictionary is saved. 
+            File saved as `pos_hod{hod_indice}_c{cosmo}_p{phase}.npy`. Defaults to True.
             
         save_density : bool, optional
             If True, the density PDF is saved. 
@@ -750,25 +751,24 @@ class CorrHOD():
             path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
             np.save(path / base_name, self.HOD_params)
         
-        # TODO : Change cubic to positions and remove the subdirectory cubic (save it in data directly)
-        if save_cubic or (save_all and hasattr(self, 'cubic_dict')):
+        if save_pos or (save_all and hasattr(self, 'cubic_dict')):
             # Pass if the cubic dictionary has not been computed yet
             if not hasattr(self, 'cubic_dict'):
                 warn('The cubic dictionary has not been computed yet. Run populate_halos first.', UserWarning)
                 pass
-            path = output_dir / 'cubic'
+            path = output_dir 
             path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
-            np.save(path / f'cubic_' + base_name, self.cubic_dict)
+            np.save(path / f'pos_' / base_name, self.cubic_dict)
                     
         if save_density or (save_all and hasattr(self, 'density')):
             path = output_dir / 'ds' / 'density'
             path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
-            np.save(path / f'density_' + base_name, self.density)
+            np.save(path / f'density_' / base_name, self.density)
         
         if save_quantiles or (save_all and hasattr(self, 'quantiles')):
             path = output_dir / 'ds' / 'quantiles'
             path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
-            np.save(path / f'quantiles_' + base_name, self.quantiles)
+            np.save(path / f'quantiles_' / base_name, self.quantiles)
         
         if save_CF or (save_all and hasattr(self, 'CF')):
             
@@ -786,20 +786,20 @@ class CorrHOD():
             
                 path = output_dir / 'tpcf'
                 path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
-                np.save(path / f'tpcf_' + base_name, tpcf_dict)
+                np.save(path / f'tpcf_' / base_name, tpcf_dict)
             
             if 'Auto' in self.CF[los].keys():
                 auto_dict = {'s': self.CF[los]['s'], **self.CF[los]['Auto']}
                 
                 path = output_dir / 'ds' / 'gaussian'
                 path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
-                np.save(path / f'ds_auto_' + base_name, auto_dict)
+                np.save(path / f'ds_auto_' / base_name, auto_dict)
             
             if 'Cross' in self.CF[los].keys():
                 cross_dict = {'s': self.CF[los]['s'], **self.CF[los]['Cross']}
                 path = output_dir / 'ds' / 'gaussian'
                 path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
-                np.save(path / f'ds_cross_' + base_name, cross_dict)
+                np.save(path / f'ds_cross_' / base_name, cross_dict)
         
         
     def run_all(self,
@@ -1016,7 +1016,7 @@ class CorrHOD():
             'hod_indice': hod_indice,
             'path': path,
             'save_HOD': False,
-            'save_cubic': False,
+            'save_pos': False,
             'save_density': False,
             'save_quantiles': False,
             'save_CF': False,
