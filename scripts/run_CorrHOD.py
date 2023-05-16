@@ -1,3 +1,4 @@
+#%% Paths
 import sys 
 from pathlib import Path
 
@@ -5,9 +6,15 @@ from pathlib import Path
 abs_path = Path(__file__).parent # Absolute path to the current file
 module_path = (abs_path / '../').resolve(strict=True)
 path2config = (abs_path / Path('../config/config.yaml')).resolve(strict=True) # Get the path of the config file (resolve for symlinks)
-path = (abs_path / Path('../data')).resolve(strict=True) # Path to save the results
-sys.path.append(str(module_path)+'/') # Add the parent directory to the path
+path = (abs_path / Path('../data5')) # Path to save the results
 
+sys.path.append(str(module_path)+'/') # Add the parent directory to the PATH
+
+# Solve case where the save path does not exist
+path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
+path.resolve(strict=True) # Turn the path into an absolute path (resolve for symlinks)
+
+#%% Imports
 import logging
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,16 +24,16 @@ from pprint import pprint
 from mockfactory import setup_logging
 from CorrHOD.utils import create_logger
 
-from CorrHOD.pipeline import CorrHOD
+from CorrHOD.pipeline import CorrHOD_cubic
 
-### Logging ###
+#%% Logging
 setup_logging() # Initialize the logging for all the loggers that will not have a handler 
 # Create the loggers for this script, and add a handler to it
 logger = create_logger('CorrHOD', level='debug', stream=sys.stdout) 
 #Temporary logger for densitysplit
 logger2 = create_logger('DS', level='debug', stream=sys.stdout) 
 
-### MPI ###
+#%% MPI
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
 size = comm.size # Number of processes
@@ -45,8 +52,13 @@ nthread = multiprocessing.cpu_count()
 logger.info(f'Rank: {rank} / {size}, {nthread} threads available')
 logger.newline()
 
+# TODO : Remove this later
+# Temporary, to make sure my path to the saved files is not overwritten by new code
+if rank == 0:
+    logger.info(f'path to data saved : {path}')
+    logger.newline()
 
-### Parameters ###
+#%% User parameters
 HOD_params = {
     'logM_cut': 12.0,
     'logM1': 14.525, 
@@ -59,15 +71,15 @@ HOD_params = {
     'Bsat': 0.0
 }
 
+los = 'average'
 nquantiles=10
-los = 'z'
-smooth_radius = 10
-cellsize = 5
+smooth_radius = 5
+cellsize = 2.5
 
-Object = CorrHOD(HOD_params, path2config)
+#%% Run CorrHOD
+Object = CorrHOD_cubic(HOD_params, path2config)
 
 Object.run_all(los_to_compute=los,
-               display_times=True,
                smooth_radius=smooth_radius,
                cellsize=cellsize,
                mpicomm=comm,
@@ -124,7 +136,7 @@ if rank == 0:
     ax[0,2].set_title('Hexadecapole', fontsize=11)
     fig.suptitle('Auto (top) and Cross (bottom) Correlation for c000', fontsize=15, y=1)
 
-    fig.savefig(path+'/CFs.png', dpi=300, bbox_inches='tight')
+    fig.savefig(str(path)+'/CFs.png', dpi=300, bbox_inches='tight')
     
 #%% Access the times
 if rank == 0 : 
