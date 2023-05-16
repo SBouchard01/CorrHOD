@@ -1,3 +1,9 @@
+"""
+This code runs the CorrHOD_cubic class on given HOD parameters, and saves the results.
+It will also plot the correlation functions and display the times for each step.
+"""
+
+
 #%% Paths
 import sys 
 from pathlib import Path
@@ -6,7 +12,7 @@ from pathlib import Path
 abs_path = Path(__file__).parent # Absolute path to the current file
 module_path = (abs_path / '../').resolve(strict=True)
 path2config = (abs_path / Path('../config/config.yaml')).resolve(strict=True) # Get the path of the config file (resolve for symlinks)
-path = (abs_path / Path('../data5')) # Path to save the results
+path = (abs_path / Path('../data')) # Path to save the results
 
 sys.path.append(str(module_path)+'/') # Add the parent directory to the PATH
 
@@ -73,8 +79,8 @@ HOD_params = {
 
 los = 'average'
 nquantiles=10
-smooth_radius = 5
-cellsize = 2.5
+smooth_radius = 10
+cellsize = 5
 
 #%% Run CorrHOD
 Object = CorrHOD_cubic(HOD_params, path2config)
