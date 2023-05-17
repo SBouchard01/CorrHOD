@@ -36,7 +36,7 @@ def apply_rsd(data, boxsize, redshift, cosmo, tracer='LRG', los = 'z'):
     try:
         data = data[tracer] # Load the LRG data
     except:
-        warn('The object is not a hod_dict. Trying to load it as a positional dataset.', TypeError)
+        warn('The object is not a hod_dict. Trying to load it as a positional dataset.', UserWarning)
         
         # Check that the data contains the right keys
         if not all([key in data.keys() for key in ['x', 'y', 'z', 'vx', 'vy', 'vz']]):
