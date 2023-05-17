@@ -320,7 +320,7 @@ class CorrHOD_cubic():
             The number of quantiles to compute. Defaults to 10.
             
         sampling : str, optional
-            The sampling to use. Defaults to 'randoms'.
+            The sampling to use. Can be 'randoms' or 'data'. Defaults to 'randoms'.
             
         filter_shape : str, optional
             The shape of the filter to use. Can be 'Gaussian' or 'TopHat'. Defaults to 'Gaussian'.
@@ -418,15 +418,21 @@ class CorrHOD_cubic():
         # Get the positions of the points in the quantile
         quantile_positions = self.quantiles[quantile] # An array of 3 columns (x,y,z)
         
+        # Initialize the dictionary for the correlations
         if not hasattr(self, 'CF'):
-            # Initialize the dictionary for the correlations
             self.CF = {} 
         if not (self.los in self.CF.keys()):
-            # Initialize the dictionary for the correlations
             self.CF[self.los] = {} 
         if not ('Auto' in self.CF[self.los].keys()):
-            # Initialize the dictionary for the auto-correlations
             self.CF[self.los]['Auto'] = {}
+            
+        # Initialize the dictionary for the pycorr objects
+        if not hasattr(self, 'xi'):
+            self.xi = {}
+        if not (self.los in self.xi.keys()):
+            self.xi[self.los] = {}
+        if not ('Auto' in self.CF[self.los].keys()):
+            self.xi[self.los]['Auto'] = {}
         
         # Compute the 2pcf
         xi_quantile = TwoPointCorrelationFunction(mode, edges,
@@ -445,6 +451,7 @@ class CorrHOD_cubic():
             poles = project_to_multipoles(xi_quantile, return_sep=False)
             
         self.CF[self.los]['Auto'][f'DS{quantile}'] = poles 
+        self.xi[self.los]['Auto'][f'DS{quantile}'] = xi_quantile 
         
         return xi_quantile
     
@@ -499,15 +506,21 @@ class CorrHOD_cubic():
         if not hasattr(self, 'data_positions'):
             self.get_tracer_positions()
         
+        # Initialize the dictionary for the correlations
         if not hasattr(self, 'CF'):
-            # Initialize the dictionary for the correlations
             self.CF = {} 
         if not (self.los in self.CF.keys()):
-            # Initialize the dictionary for the correlations
             self.CF[self.los] = {} 
-        if not ('Cross' in self.CF[self.los].keys()):
-            # Initialize the dictionary for the auto-correlations
+        if not ('Auto' in self.CF[self.los].keys()):
             self.CF[self.los]['Cross'] = {}
+            
+        # Initialize the dictionary for the pycorr objects
+        if not hasattr(self, 'xi'):
+            self.xi = {}
+        if not (self.los in self.xi.keys()):
+            self.xi[self.los] = {}
+        if not ('Auto' in self.CF[self.los].keys()):
+            self.xi[self.los]['Cross'] = {}
         
         # Compute the 2pcf
         xi_quantile = TwoPointCorrelationFunction(mode, edges,
@@ -527,6 +540,7 @@ class CorrHOD_cubic():
             poles = project_to_multipoles(xi_quantile, return_sep=False)
             
         self.CF[self.los]['Cross'][f'DS{quantile}'] = poles 
+        self.xi[self.los]['Cross'][f'DS{quantile}'] = xi_quantile 
         
         return xi_quantile
     
@@ -569,15 +583,21 @@ class CorrHOD_cubic():
         if not hasattr(self, 'data_positions'):
             self.get_tracer_positions()
         
+        # Initialize the dictionary for the correlations
         if not hasattr(self, 'CF'):
-            # Initialize the dictionary for the correlations
             self.CF = {} 
         if not (self.los in self.CF.keys()):
-            # Initialize the dictionary for the correlations
             self.CF[self.los] = {} 
         if not ('2PCF' in self.CF[self.los].keys()):
-            # Initialize the dictionary for the 2PCF
             self.CF[self.los]['2PCF'] = {}
+        
+        # Initialize the dictionary for the pycorr objects
+        if not hasattr(self, 'xi'):
+            self.xi = {}
+        if not (self.los in self.xi.keys()):
+            self.xi[self.los] = {}
+        if not ('Auto' in self.CF[self.los].keys()):
+            self.xi[self.los]['2PCF'] = {}
     
         # Compute the 2pcf
         xi = TwoPointCorrelationFunction(mode, edges, 
@@ -599,6 +619,7 @@ class CorrHOD_cubic():
             poles = project_to_multipoles(xi, return_sep=False)
             
         self.CF[self.los]['2PCF'] = poles
+        self.xi[self.los]['2PCF'] = xi
         
         return xi
     
@@ -683,6 +704,7 @@ class CorrHOD_cubic():
              save_density:bool = True,
              save_quantiles:bool = True,
              save_CF:bool = True,
+             save_xi:bool = True,
              los:str = 'average', 
              save_all:bool = False):
         """
@@ -721,6 +743,12 @@ class CorrHOD_cubic():
             It contains the separation bins in the `s` key and the poles in the `2PCF` key.
             The Auto and Corr dictionaries are saved as `ds_auto_hod{hod_indice}_c{cosmo}_p{phase}.npy` and `ds_cross_hod{hod_indice}_c{cosmo}_p{phase}.npy`.
             Each dictionnary contains `DS{quantile}` keys with the CF of the quantile. The `s` key contains the separation bins.
+            Defaults to True.
+            
+        save_xi : bool, optional
+            If True, the pycorr objects are saved in an unique dictionary.
+            The 2PCF can be accessed using the `xi[los]['2PCF']` key.
+            The auto and cross-correlations of the quantiles can be accessed using the `xi[los]['Auto']['DS{i}']` and `xi[los]['Cross']['DS{i}']` keys.
             Defaults to True.
             
         los : str, optional
@@ -778,6 +806,11 @@ class CorrHOD_cubic():
             path = output_dir / 'ds' / 'quantiles'
             path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
             np.save(path / (f'quantiles_' + base_name), self.quantiles)
+            
+        if save_xi or (save_all and hasattr(self, 'xi')):
+            path = output_dir / 'xi'
+            path.mkdir(parents=True, exist_ok=True)
+            np.save(path / (f'xi_' + base_name), self.xi)
         
         if save_CF or (save_all and hasattr(self, 'CF')):
             
