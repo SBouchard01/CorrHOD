@@ -746,8 +746,10 @@ class CorrHOD_cubic():
         # Get the HOD indice in the right format (same as the cosmology and phase)
         hod_indice = f'{hod_indice:03d}'
         
-        # define the base name of the files
+        # Define the base names of the files
         base_name = f'hod{hod_indice}_{los}_c{cosmo}_p{phase}.npy'
+        hod_name = f'hod{hod_indice}_c{cosmo}_p{phase}.npy' # HOD parameters don't depend on the line of sight
+        cubic_name = f'pos_hod{hod_indice}_c{cosmo}_p{phase}.npy' # The cubic dictionary does not depend on the line of sight either
         
         # Note : If the user explicitly wants to save somethig, it is assumed that it has been computed before.
         # No error is explicitly raised if the user tries to save something that has not been computed yet.
@@ -756,7 +758,7 @@ class CorrHOD_cubic():
         if save_HOD or (save_all and hasattr(self, 'HOD_params')):
             path = output_dir / 'hod' 
             path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
-            np.save(path / base_name, self.HOD_params)
+            np.save(path / hod_name, self.HOD_params)
         
         if save_pos or (save_all and hasattr(self, 'cubic_dict')):
             # Pass if the cubic dictionary has not been computed yet
@@ -765,7 +767,7 @@ class CorrHOD_cubic():
                 pass
             path = output_dir 
             path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
-            np.save(path / (f'pos_' + base_name), self.cubic_dict)
+            np.save(path / cubic_name, self.cubic_dict)
                     
         if save_density or (save_all and hasattr(self, 'density')):
             path = output_dir / 'ds' / 'density'
