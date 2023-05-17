@@ -765,17 +765,17 @@ class CorrHOD_cubic():
                 pass
             path = output_dir 
             path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
-            np.save(path / f'pos_' / base_name, self.cubic_dict)
+            np.save(path / (f'pos_' + base_name), self.cubic_dict)
                     
         if save_density or (save_all and hasattr(self, 'density')):
             path = output_dir / 'ds' / 'density'
             path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
-            np.save(path / f'density_' / base_name, self.density)
+            np.save(path / (f'density_' + base_name), self.density)
         
         if save_quantiles or (save_all and hasattr(self, 'quantiles')):
             path = output_dir / 'ds' / 'quantiles'
             path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
-            np.save(path / f'quantiles_' / base_name, self.quantiles)
+            np.save(path / (f'quantiles_' + base_name), self.quantiles)
         
         if save_CF or (save_all and hasattr(self, 'CF')):
             
@@ -793,20 +793,20 @@ class CorrHOD_cubic():
             
                 path = output_dir / 'tpcf'
                 path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
-                np.save(path / f'tpcf_' / base_name, tpcf_dict)
+                np.save(path / (f'tpcf_' + base_name), tpcf_dict)
             
             if 'Auto' in self.CF[los].keys():
                 auto_dict = {'s': self.CF[los]['s'], **self.CF[los]['Auto']}
                 
                 path = output_dir / 'ds' / 'gaussian'
                 path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
-                np.save(path / f'ds_auto_' / base_name, auto_dict)
+                np.save(path / (f'ds_auto_' + base_name), auto_dict)
             
             if 'Cross' in self.CF[los].keys():
                 cross_dict = {'s': self.CF[los]['s'], **self.CF[los]['Cross']}
                 path = output_dir / 'ds' / 'gaussian'
                 path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
-                np.save(path / f'ds_cross_' / base_name, cross_dict)
+                np.save(path / (f'ds_cross_' + base_name), cross_dict)
         
         
         
