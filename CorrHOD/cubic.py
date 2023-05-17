@@ -330,7 +330,7 @@ class CorrHOD_cubic():
 
         Returns
         -------
-        density : np.ndarray
+        density : np.ndarray, optional
             The density field. It is a (N,3) array.
         
         quantiles : np.ndarray
