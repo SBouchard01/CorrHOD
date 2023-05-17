@@ -21,7 +21,6 @@ path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not ex
 path.resolve(strict=True) # Turn the path into an absolute path (resolve for symlinks)
 
 #%% Imports
-import logging
 import numpy as np
 import matplotlib.pyplot as plt
 
