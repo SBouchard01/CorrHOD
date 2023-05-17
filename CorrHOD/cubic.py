@@ -813,6 +813,7 @@ class CorrHOD_cubic():
         
         
     def run_all(self,
+                is_populated:bool = False,
                 los_to_compute='average',
                 # Parameters for the DensitySplit
                 smooth_radius:float = 10,
@@ -843,6 +844,9 @@ class CorrHOD_cubic():
         los_to_compute : str, optional
             The line of sight along which to compute the 2PCF, the autocorrelation and cross-correlation of the quantiles.
             If set to 'average', the 2PCF, the autocorrelation and cross-correlation of the quantiles will be averaged on the three lines of sight. Defaults to 'average'.
+           
+        is_populated : bool, optional
+            If True, the halos have already been populated before running this method. Defaults to False.
             
         smooth_radius : float, optional
             The radius of the Gaussian smoothing in Mpc/h used in the densitysplit. 
@@ -919,6 +923,7 @@ class CorrHOD_cubic():
                 logger.info(f"\t Number density : {self.data_params['tracer_density_mean'][self.tracer]:.2e} h^3/Mpc^3")
             logger.newline()
         
+        if root and not is_populated:
             logger.info('Initializing and populating the halos ...')
             self.initialize_halo() # Initialize the halo
         
@@ -928,8 +933,7 @@ class CorrHOD_cubic():
             self.populate_halos() # Populate the halos
         
             logger.newline() # Just to add a space because populate_halos has a built-in print I can't remove
-        else:
-            self.Ball = None
+        elif not is_populated:
             self.cubic_dict = None
 
         # Here, we run all the CF computations for each los given in los_to_compute.
