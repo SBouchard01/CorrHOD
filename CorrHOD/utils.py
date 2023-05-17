@@ -51,10 +51,16 @@ def apply_rsd(data, boxsize, redshift, cosmo, tracer='LRG', los = 'z'):
     vy = data['vy']
     vz = data['vz']
     
-    # Get the positions (Add boxsize/2 to center the box at boxsize/2)
-    x = data['x'] + boxsize / 2
-    y = data['y'] + boxsize / 2
-    z = data['z'] + boxsize / 2
+    # Get the positions 
+    if np.min(data['x']) < 0 or np.min(data['y']) < 0 or np.min(data['z']) < 0:
+        # Add boxsize/2 to center the box at boxsize/2 if the box is centered on 0
+        x = data['x'] + boxsize / 2
+        y = data['y'] + boxsize / 2
+        z = data['z'] + boxsize / 2
+    else:
+        x = data['x']
+        y = data['y']
+        z = data['z']
     
     # Get the redshift-space positions for each axis. That way, we can replace the los axis with the redshift-space position
     x_rsd = x + vx / (hubble * az)
