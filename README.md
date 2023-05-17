@@ -3,7 +3,7 @@ A code that populates dark matter halos and computes correlation functions
 
 
 ## Documentation
-(Comming later)
+(Coming later)
 
 ## Requirements
 Strict requirements are : 
@@ -17,3 +17,6 @@ Strict requirements are :
 
 ## Installation
 (Nothing implemented yet, come back later)
+
+## Examples
+Examples can be found under the `examples` directory.
