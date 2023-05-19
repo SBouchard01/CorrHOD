@@ -27,8 +27,8 @@ class CorrHOD_cubic():
     """
     
     def __init__(self, 
-                 HOD_params:dict, 
-                 path2config:str,  
+                 path2config:str, 
+                 HOD_params:dict = None,  
                  los:str = 'z', 
                  boxsize:float = 2000, 
                  cosmo:int = 0):
@@ -39,11 +39,12 @@ class CorrHOD_cubic():
 
         Parameters
         ----------
-        HOD_params : dict
-            Dictionary containing the HOD parameters. The keys must be the same as the ones used in AbacusHOD.
-            
         path2config : str
             Path to the config file of AbacusHOD. It is used to load the simulation. See the documentation for more details.
+            
+        HOD_params : dict, optional
+            Dictionary containing the HOD parameters. The keys must be the same as the ones used in AbacusHOD.
+            If not provided, the default parameters of AbacusHOD are used. Defaults to None.
             
         los : str, optional
             Line-of-sight direction in which to apply the RSD. Defaults to 'z'.
@@ -122,8 +123,10 @@ class CorrHOD_cubic():
         
         # Update the parameters of the AbacusHOD object
         self.Ball.params['Lbox'] = self.boxsize
-        for key in self.HOD_params.keys():
-            self.Ball.tracers[self.tracer][key] = self.HOD_params[key]
+        if self.HOD_params is not None:
+            # Update the HOD parameters if different ones are provided
+            for key in self.HOD_params.keys():
+                self.Ball.tracers[self.tracer][key] = self.HOD_params[key]
         
         
         # Compute the incompleteness for the tracer (i.e. the fraction of galaxies that are observed)
@@ -299,8 +302,9 @@ class CorrHOD_cubic():
     def compute_DensitySplit(self,
                              smooth_radius:float = 10,
                              cellsize:float = 5,
-                             nquantiles:int = 10,
+                             nquantiles:int = 10, 
                              sampling:str = 'randoms',
+                             randoms=None,
                              filter_shape:str = 'Gaussian',
                              return_density:bool = True,
                              nthread=16):
@@ -321,6 +325,11 @@ class CorrHOD_cubic():
             
         sampling : str, optional
             The sampling to use. Can be 'randoms' or 'data'. Defaults to 'randoms'.
+            
+        randoms : np.ndarray, optional
+            The positions of the randoms. It is a (N,3) array of points in the range [0, boxsize] for each coordinate.
+            If set to none, a random array will be created of size nquantiles * len(data_positions). 
+            Defaults to None.
             
         filter_shape : str, optional
             The shape of the filter to use. Can be 'Gaussian' or 'TopHat'. Defaults to 'Gaussian'.
@@ -354,9 +363,12 @@ class CorrHOD_cubic():
                               cellsize=cellsize,
                               nthreads=nthread)
             
-            if sampling == 'randoms':
+            if sampling == 'randoms' and randoms is None:
                 # Sample the positions on random points that we have to create in that branch
+                logger.debug('No randoms provided, creating randoms')
                 sampling_positions = np.random.uniform(0, self.boxsize, (nquantiles * len(self.data_positions), 3))
+            elif sampling == 'randoms':
+                sampling_positions = randoms
             elif sampling == 'data':
                 sampling_positions = self.data_positions
             else:
@@ -431,7 +443,7 @@ class CorrHOD_cubic():
             self.xi = {}
         if not (self.los in self.xi.keys()):
             self.xi[self.los] = {}
-        if not ('Auto' in self.CF[self.los].keys()):
+        if not ('Auto' in self.xi[self.los].keys()):
             self.xi[self.los]['Auto'] = {}
         
         # Compute the 2pcf
@@ -511,7 +523,7 @@ class CorrHOD_cubic():
             self.CF = {} 
         if not (self.los in self.CF.keys()):
             self.CF[self.los] = {} 
-        if not ('Auto' in self.CF[self.los].keys()):
+        if not ('Cross' in self.CF[self.los].keys()):
             self.CF[self.los]['Cross'] = {}
             
         # Initialize the dictionary for the pycorr objects
@@ -519,7 +531,7 @@ class CorrHOD_cubic():
             self.xi = {}
         if not (self.los in self.xi.keys()):
             self.xi[self.los] = {}
-        if not ('Auto' in self.CF[self.los].keys()):
+        if not ('Cross' in self.xi[self.los].keys()):
             self.xi[self.los]['Cross'] = {}
         
         # Compute the 2pcf
@@ -596,7 +608,7 @@ class CorrHOD_cubic():
             self.xi = {}
         if not (self.los in self.xi.keys()):
             self.xi[self.los] = {}
-        if not ('Auto' in self.CF[self.los].keys()):
+        if not ('Auto' in self.xi[self.los].keys()):
             self.xi[self.los]['2PCF'] = {}
     
         # Compute the 2pcf
@@ -848,6 +860,7 @@ class CorrHOD_cubic():
     def run_all(self,
                 is_populated:bool = False,
                 los_to_compute='average',
+                downsample_to:float = None,
                 # Parameters for the DensitySplit
                 smooth_radius:float = 10,
                 cellsize:float = 5,
@@ -880,6 +893,11 @@ class CorrHOD_cubic():
            
         is_populated : bool, optional
             If True, the halos have already been populated before running this method. Defaults to False.
+            
+        downsample_to : float, optional
+            If provided, the galaxies will be randomly downsampled to the provided number density in h^3/Mpc^3 before computing the CFs. 
+            This can be useful to reduce the computation time.
+            Defaults to None.
             
         smooth_radius : float, optional
             The radius of the Gaussian smoothing in Mpc/h used in the densitysplit. 
@@ -968,6 +986,8 @@ class CorrHOD_cubic():
             logger.newline() # Just to add a space because populate_halos has a built-in print I can't remove
         elif not is_populated:
             self.cubic_dict = None
+        elif root:
+            logger.info('The halos have already been populated. Skipping the initialization and population steps.\n')
 
         # Here, we run all the CF computations for each los given in los_to_compute.
         # We will then average the results on the lines of sight if needed
@@ -983,17 +1003,7 @@ class CorrHOD_cubic():
                 logger.newline()
                 
                 self.get_tracer_positions() # Get the positions of the galaxies with RSD on the line of sight
-            else:
-                self.data_positions = None
             
-            if mpicomm is not None:
-                self.data_positions = mpicomm.bcast(self.data_positions, root=mpiroot) # Broadcast the positions of the galaxies to all the processes
-            
-            if rank == 1:
-                logger.debug(f'(Broadcast test) Number of galaxies : {len(self.data_positions)} on rank {rank}')
-                logger.newline()
-            
-            if root : 
                 # Compute the DensitySplit
                 logger.info('Computing the DensitySplit ...')
                 tmp_time = time()
@@ -1006,12 +1016,26 @@ class CorrHOD_cubic():
                 
                 self.times_dict[los]['compute_DensitySplit'] = time()-tmp_time
                 logger.info(f"Computed the DensitySplit in {self.times_dict[los]['compute_DensitySplit']:.2f} s\n")
+                
+                # Downsample the galaxies if needed
+                if downsample_to is not None:
+                    wanted_number = int(downsample_to*self.boxsize**3) # Get the wanted number of galaxies in the box
+                    sample_indices = np.random.choice(len(self.data_positions), size=wanted_number, replace=False)
+                    self.data_positions = self.data_positions[sample_indices]
+                    logger.info(f'Downsampled the galaxies to {downsample_to:.2e} h^3/Mpc^3\n')
+                    
             else:
+                self.data_positions = None
                 self.density = None
                 self.quantiles = None
             
             if mpicomm is not None:
+                self.data_positions = mpicomm.bcast(self.data_positions, root=mpiroot) # Broadcast the positions of the galaxies to all the processes
                 self.quantiles = mpicomm.bcast(self.quantiles, root=mpiroot) # Broadcast the quantiles to all the processes
+            
+            if rank == 1:
+                logger.debug(f'(Broadcast test) Number of galaxies : {len(self.data_positions)} on rank {rank}')
+                logger.newline()
             
             # Compute the 2PCF
             if root : 
