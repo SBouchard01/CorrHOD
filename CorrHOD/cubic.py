@@ -368,8 +368,10 @@ class CorrHOD_cubic():
                 logger.debug('No randoms provided, creating randoms')
                 sampling_positions = np.random.uniform(0, self.boxsize, (nquantiles * len(self.data_positions), 3))
             elif sampling == 'randoms':
+                # Sample the positions on the provided randoms
                 sampling_positions = randoms
             elif sampling == 'data':
+                # Sample the positions on the data positions
                 sampling_positions = self.data_positions
             else:
                 raise ValueError('The sampling parameter must be either "randoms" or "data"')
@@ -1023,6 +1025,12 @@ class CorrHOD_cubic():
                     sample_indices = np.random.choice(len(self.data_positions), size=wanted_number, replace=False)
                     self.data_positions = self.data_positions[sample_indices]
                     logger.info(f'Downsampled the galaxies to {downsample_to:.2e} h^3/Mpc^3\n')
+                    
+                    # Downsample the quantiles to the new number of galaxies
+                    for i in range(nquantiles):
+                        wanted_number = len(self.data_positions) 
+                        sample_indices = np.random.choice(len(self.quantiles[i]), size=wanted_number, replace=False)
+                        self.quantiles[i] = self.quantiles[i][sample_indices]
                     
             else:
                 self.data_positions = None
