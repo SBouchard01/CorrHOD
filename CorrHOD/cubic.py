@@ -346,17 +346,22 @@ class CorrHOD_cubic():
             The quantiles. It is a (nquantiles,N,3) array. 
         """
         logger = logging.getLogger('DS') #tmp
-        logger.debug('compute_DensitySplit function launched') #tmp
+        
         # Get the positions of the galaxies
         if not hasattr(self, 'data_positions'):
             self.get_tracer_positions()
         
         # Initialize the DensitySplit object and compute the density field
         try : #Main branch
+            logger.debug('Launched densitysplit on main branch')
+            
             ds = DensitySplit(data_positions=self.data_positions, boxsize=self.boxsize)
 
             self.density = ds.get_density_mesh(smooth_radius=smooth_radius, cellsize=cellsize, sampling=sampling, filter_shape=filter_shape)
         except : #OpenMP branch (an error will be raised because the OpenMP branch used differently)
+            
+            logger.debug('Launched densitysplit on openmp branch') #tmp
+            
             ds = DensitySplit(data_positions=self.data_positions, 
                               boxsize=self.boxsize, 
                               boxcenter=self.boxsize/2,
@@ -377,6 +382,9 @@ class CorrHOD_cubic():
                 raise ValueError('The sampling parameter must be either "randoms" or "data"')
             
             self.density = ds.get_density_mesh(sampling_positions=sampling_positions, smoothing_radius=smooth_radius)
+        
+        # Temporary fix waiting for an update of the code : Remove the unphysical values (density under -1)
+        self.density[self.density < -1] = -1 # Remove the outliers
         
         self.quantiles = ds.get_quantiles(nquantiles=nquantiles)
 
