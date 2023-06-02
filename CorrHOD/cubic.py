@@ -2,20 +2,18 @@ import yaml, logging, sys
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from warnings import warn
-from time import time, strftime
+from warnings import warn, filterwarnings, catch_warnings
+from time import time
 
 from cosmoprimo.fiducial import AbacusSummit
 from abacusnbody.hod.abacus_hod import AbacusHOD
 
 from densitysplit.pipeline import DensitySplit
-from densitysplit.utilities import sky_to_cartesian
 from densitysplit.cosmology import Cosmology
 
-from mockfactory import setup_logging
 from pycorr import TwoPointCorrelationFunction, project_to_multipoles
 
-from CorrHOD.utils import apply_rsd, create_logger
+from CorrHOD.utils import apply_rsd
 
 
 class CorrHOD_cubic():
@@ -174,17 +172,18 @@ class CorrHOD_cubic():
             if abs(expected_n - actual_n) > std_n :
                 warn(f'The number density of the populated halos ({actual_n}) is not close to the target number density ({expected_n}).', UserWarning) 
 
+        self.nbar = actual_n
         return self.cubic_dict
     
     
-    
-    def set_tracer_data(self, 
-                        positions:np.ndarray,
-                        velocities:np.ndarray,
-                        masses:np.ndarray,
-                        halo_id:np.ndarray,
-                        Ncent:int,
-                        tracer:str = 'LRG'):
+    #TODO : Change this : leave it to the user and just run checks to make sure the data is in the right format
+    def set_cubic(self, 
+                  positions:np.ndarray,
+                  velocities:np.ndarray,
+                  masses:np.ndarray,
+                  halo_id:np.ndarray,
+                  Ncent:int,
+                  tracer:str = 'LRG'):
         """
         A method to set a tracer data in the cubic dictionary.
         This will overwrite the tracer data if it already exists. Otherwise, it will create it.
@@ -337,13 +336,16 @@ class CorrHOD_cubic():
         return_density : bool, optional
             If True, the density field is returned. Defaults to True.
 
+        nthread : int, optional
+            The number of threads to use. Defaults to 16.
+        
         Returns
         -------
-        density : np.ndarray, optional
-            The density field. It is a (N,3) array.
-        
         quantiles : np.ndarray
             The quantiles. It is a (nquantiles,N,3) array. 
+        
+        density : np.ndarray, optional
+            The density field. It is a (N,3) array.
         """
         logger = logging.getLogger('DS') #tmp
         
@@ -389,9 +391,55 @@ class CorrHOD_cubic():
         self.quantiles = ds.get_quantiles(nquantiles=nquantiles)
 
         if return_density:
-            return self.density, self.quantiles
+            return self.quantiles, self.density
         
         return self.quantiles    
+
+
+
+    def downsample_data(self,
+                        new_n:float):
+        """
+        Downsample the data to a new number of galaxies.
+        The quantiles are also downsampled to the same number of galaxies.
+        (They are generated to have the same number of points as the data in each quantile)
+
+        Parameters
+        ----------
+        new_n : float
+            The new number density in the box.
+
+        Returns
+        -------
+        data_positions : np.ndarray
+            The positions of the galaxies after downsampling. It is a (N,3) array.
+            
+        quantiles : np.ndarray
+            The quantiles after downsampling. It is a (nquantiles,N,3) array.
+        """
+        logger = logging.getLogger('CorrHOD') # Log some info just in case
+        
+        if not hasattr(self, 'nbar'):
+            self.nbar = len(self.data_positions) / self.boxsize**3
+        
+        if new_n is None or new_n > self.nbar : # Do nothing
+            logger.warning(f'Data not downsampled dur to number density {new_n} too small or None')
+            return self.data_positions, self.quantiles
+        
+        N = len(self.data_positions)
+        wanted_number = int(new_n*self.boxsize**3) # Get the wanted number of galaxies in the box
+        sample_indices = np.random.choice(len(self.data_positions), size=wanted_number, replace=False)
+        self.data_positions = self.data_positions[sample_indices]
+        
+        logger.info(f'Downsampling the data to a number density of {new_n:.2e} h^3/Mpc^3: {len(self.data_positions)} galaxies remaining from {N} galaxies')
+        
+        # Downsample the quantiles to the new number of galaxies (with the same proportions)
+        for i in range(len(self.quantiles)):
+            wanted_number = len(self.data_positions)
+            sample_indices = np.random.choice(len(self.quantiles[i]), size=wanted_number, replace=False)
+            self.quantiles[i] = self.quantiles[i][sample_indices]
+        
+        return self.data_positions, self.quantiles
 
 
     
@@ -630,9 +678,6 @@ class CorrHOD_cubic():
                                          mpicomm = mpicomm, mpiroot = mpiroot, num_threads = nthread)
         
         # Add the 2pcf to the dictionary
-        self.CF[self.los]['2PCF'] = xi
-        
-        # Add the 2pcf to the dictionary
         if not ('s' in self.CF[self.los]):
             # Note that the s is the same for all the lines of sight as long as we give the same edges to the 2PCF function
             s, poles = project_to_multipoles(xi)
@@ -791,21 +836,23 @@ class CorrHOD_cubic():
         
         # Get the cosmo and phase from sim_name (Naming convention has to end by '_c{cosmo}_p{phase}' !)
         cosmo = sim_name.split('_')[-2].split('c')[-1] # Get the cosmology number by splitting the name of the simulation
-        phase = sim_name.split('_')[-1].split('c')[-1] # Get the phase number by splitting the name of the simulation
+        phase = sim_name.split('_')[-1].split('ph')[-1] # Get the phase number by splitting the name of the simulation
         
         # Get the HOD indice in the right format (same as the cosmology and phase)
         hod_indice = f'{hod_indice:03d}'
         
         # Define the base names of the files
-        base_name = f'hod{hod_indice}_{los}_c{cosmo}_p{phase}.npy'
-        hod_name = f'hod{hod_indice}_c{cosmo}_p{phase}.npy' # HOD parameters don't depend on the line of sight
-        cubic_name = f'pos_hod{hod_indice}_c{cosmo}_p{phase}.npy' # The cubic dictionary does not depend on the line of sight either
+        base_name = f'hod{hod_indice}_{los}_c{cosmo}_ph{phase}.npy'
+        hod_name = f'hod{hod_indice}_c{cosmo}_ph{phase}.npy' # HOD parameters don't depend on the line of sight
+        cubic_name = f'pos_hod{hod_indice}_c{cosmo}_ph{phase}.npy' # The cubic dictionary does not depend on the line of sight either
         
         # Note : If the user explicitly wants to save somethig, it is assumed that it has been computed before.
         # No error is explicitly raised if the user tries to save something that has not been computed yet.
         # If the user wants to save everything, the results are saved only if they exist.
         
         if save_HOD or (save_all and hasattr(self, 'HOD_params')):
+            # Add the number density to the HOD parameters
+            self.HOD_params['nbar'] = self.nbar
             path = output_dir / 'hod' 
             path.mkdir(parents=True, exist_ok=True) # Create the directory if it does not exist
             np.save(path / hod_name, self.HOD_params)
@@ -869,6 +916,7 @@ class CorrHOD_cubic():
         
     def run_all(self,
                 is_populated:bool = False,
+                exit_on_underpopulated:bool = False,
                 los_to_compute='average',
                 downsample_to:float = None,
                 # Parameters for the DensitySplit
@@ -903,7 +951,10 @@ class CorrHOD_cubic():
            
         is_populated : bool, optional
             If True, the halos have already been populated before running this method. Defaults to False.
-            
+        
+        exit_on_underpopulated : bool, optional
+            If True, the function will exit if the halos are underpopulated compared to the requested number density. Defaults to False.
+        
         downsample_to : float, optional
             If provided, the galaxies will be randomly downsampled to the provided number density in h^3/Mpc^3 before computing the CFs. 
             This can be useful to reduce the computation time.
@@ -990,9 +1041,18 @@ class CorrHOD_cubic():
         
             self.times_dict['initialize_halo'] = time()-start_time
             logger.info(f"Initialized the halos in {self.times_dict['initialize_halo']:.2f} s\n")
-        
-            self.populate_halos() # Populate the halos
-        
+
+            # Catch the UserWarning raised by the densitysplit if the halos are underpopulated
+            with catch_warnings():
+                filterwarnings("error") 
+                try : 
+                    self.populate_halos() # Populate the halos
+                except UserWarning as w: # Catch the warning if needed
+                    logger.warning('Warning : ' + str(w)) # Display the warning without triggering the error
+                    if exit_on_underpopulated: 
+                        logger.info('The halos are underpopulated. Exiting the function as requested.\n')
+                        return None # Exit the function to avoid crashing the code
+            
             logger.newline() # Just to add a space because populate_halos has a built-in print I can't remove
         elif not is_populated:
             self.cubic_dict = None
@@ -1029,16 +1089,8 @@ class CorrHOD_cubic():
                 
                 # Downsample the galaxies if needed
                 if downsample_to is not None:
-                    wanted_number = int(downsample_to*self.boxsize**3) # Get the wanted number of galaxies in the box
-                    sample_indices = np.random.choice(len(self.data_positions), size=wanted_number, replace=False)
-                    self.data_positions = self.data_positions[sample_indices]
+                    self.downsample_data(downsample_to)
                     logger.info(f'Downsampled the galaxies to {downsample_to:.2e} h^3/Mpc^3\n')
-                    
-                    # Downsample the quantiles to the new number of galaxies
-                    for i in range(nquantiles):
-                        wanted_number = len(self.data_positions) 
-                        sample_indices = np.random.choice(len(self.quantiles[i]), size=wanted_number, replace=False)
-                        self.quantiles[i] = self.quantiles[i][sample_indices]
                     
             else:
                 self.data_positions = None
@@ -1108,6 +1160,7 @@ class CorrHOD_cubic():
             'save_density': False,
             'save_quantiles': False,
             'save_CF': False,
+            'save_xi': False,
             'los': 'average', # We save the averaged CFs by default
             'save_all': False
         }
