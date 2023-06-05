@@ -25,7 +25,8 @@ class CorrHOD_cutsky(CorrHOD_cubic):
     Finally, it uses pycorr to compute the 2PCF and the autocorrelation and cross-correlation of the quantiles.
     
     If a cutsky file is to be provided, the cutsky must be in the form of a dictionary in sky coordinates.
-    Every computation in this class is done in cartesian coordinates. The conversion is done using the densitysplit package.
+    Every computation in this class is done in sky coordinates, except for the densitysplit. The conversion is done using the densitysplit package.
+    Unless the name of the variable indicates it, the positions are in (ra, dec, comoving distance) coordinates. If the name of the variable contains 'sky', the positions are in (ra, dec, z) coordinates.
     """
     
     # __init__ method is the same as in the CorrHOD_cubic class
@@ -44,7 +45,8 @@ class CorrHOD_cutsky(CorrHOD_cubic):
     
     
     
-    def get_tracer_positions(self):
+    def get_tracer_positions(self,
+                             return_cartesian:bool=False):
         """
         Get the positions of the tracers (data and randoms) in cartesian coordinates.
         Note : For now, we assume that the RSD are already applied to the data
@@ -73,13 +75,23 @@ class CorrHOD_cutsky(CorrHOD_cubic):
             if not ( all([key in data.keys() for key in ['RA', 'DEC', 'Z']]) or all([key in randoms.keys() for key in ['RA', 'DEC', 'Z']]) ):
                 raise ValueError('The object is not a hod_dict and does not contain the keys "RA", "DEC", "Z"')
         
+        data_cd = self.cosmo.comoving_radial_distance(data['Z']) # Convert the z to comoving distance
+        random_cd = self.cosmo.comoving_radial_distance(randoms['Z']) # Convert the z to comoving distance
+        
+        # Concatenate the positions with the comoving distance
+        self.data_positions = np.c_[data['RA'], data['DEC'], data_cd]
+        self.randoms_positions = np.c_[randoms['RA'], randoms['DEC'], random_cd]
+        
         # Concatenate the positions in sky coordinates
-        sky_data = np.c_[data['RA'], data['DEC'], data['Z']]
-        sky_randoms = np.c_[randoms['RA'], randoms['DEC'], randoms['Z']]
+        self.data_sky = np.c_[data['RA'], data['DEC'], data['Z']]
+        self.randoms_sky = np.c_[randoms['RA'], randoms['DEC'], randoms['Z']]
         
         # Use densitysplit to convert to cartesian coordinates
-        self.data_positions = sky_to_cartesian(sky_data, self.ds_cosmo)
-        self.randoms_positions = sky_to_cartesian(sky_randoms, self.ds_cosmo)
+        self.data_cartesian = sky_to_cartesian(self.data_sky, self.ds_cosmo)
+        self.randoms_cartesian = sky_to_cartesian(self.randoms_sky, self.ds_cosmo)
+
+        if return_cartesian:
+            return self.data_cartesian, self.randoms_cartesian
     
         return self.data_positions, self.randoms_positions
     
@@ -113,17 +125,8 @@ class CorrHOD_cutsky(CorrHOD_cubic):
             The weights of the randoms.
         """
         
-        # Get the redshifts of the tracers
-        try:
-            z_data = self.cutsky_dict[self.tracer]['Z']
-            z_random = self.randoms_dict[self.tracer]['Z']
-        except:
-            # Handle the case where we have set the dicts without using the set_cutsky method
-            warn('The object is not a hod_dict. Trying to load it as a positional dataset.', UserWarning)
-
-            z_data = self.cutsky_dict['Z']
-            z_random = self.randoms_dict['Z']
-        
+        z_data = self.data_positions[:,2]
+        z_random = self.randoms_positions[:,2]        
         
         # Compute the weights
         self.data_weights, self.randoms_weights = w_fkp(z_data, z_random, self.cosmo, edges=edges, area=area, P0=P0)
@@ -190,18 +193,18 @@ class CorrHOD_cutsky(CorrHOD_cubic):
         try: # Main branch
             logger.debug('Launched densitysplit on main branch')
             
-            ds = DensitySplit(data_positions=self.data_positions, 
+            ds = DensitySplit(data_positions=self.data_cartesian, 
                               data_weights=self.data_weights,
-                              randoms_positions=self.randoms_positions,
+                              randoms_positions=self.randoms_cartesian,
                               randoms_weights=self.randoms_weights)
 
             self.density = ds.get_density_mesh(smooth_radius=smooth_radius, cellsize=cellsize, sampling=sampling, filter_shape=filter_shape)
         except : #OpenMP branch (an error will be raised because the OpenMP branch used differently)
             logger.debug('Launched densitysplit on openmp branch') #tmp
             
-            ds = DensitySplit(data_positions=self.data_positions, 
+            ds = DensitySplit(data_positions=self.data_cartesian, 
                               data_weights=self.data_weights,
-                              randoms_positions=self.randoms_positions,
+                              randoms_positions=self.randoms_cartesian,
                               randoms_weights=self.randoms_weights,
                               boxpad=1.1,
                               cellsize=cellsize,
@@ -210,13 +213,13 @@ class CorrHOD_cutsky(CorrHOD_cubic):
             if sampling == 'randoms' and randoms is None:
                 # Sample the positions on random points that we have to create in that branch
                 logger.debug('No randoms provided, creating randoms')
-                sampling_positions = self.randoms_positions
+                sampling_positions = self.randoms_cartesian
             elif sampling == 'randoms':
                 # Sample the positions on the provided randoms
                 sampling_positions = randoms
             elif sampling == 'data':
                 # Sample the positions on the data positions
-                sampling_positions = self.data_positions
+                sampling_positions = self.data_cartesian
             else:
                 raise ValueError('The sampling parameter must be either "randoms" or "data"')
             
@@ -225,8 +228,17 @@ class CorrHOD_cutsky(CorrHOD_cubic):
         # Temporary fix waiting for an update of the code : Remove the unphysical values (density under -1)
         self.density[self.density < -1] = -1 # Remove the outliers
         
-        self.quantiles = ds.get_quantiles(nquantiles=nquantiles)
+        # Compute the quantiles in cartesian coordinates
+        self.quantiles_cartesian = ds.get_quantiles(nquantiles=nquantiles)
         
+        # Convert the quantiles to sky coordinates
+        self.quantiles=[]
+        self.quantiles_sky = []
+        for i in range(nquantiles):
+            self.quantiles_sky.append(cartesian_to_sky(self.quantiles_cartesian[i], self.ds_cosmo)) # Save the quantiles in sky coordinates (for the n(z) computation)
+            sky_quantile = cartesian_to_sky(self.quantiles_cartesian[i], self.ds_cosmo) # Convert the quantiles to sky coordinates
+            sky_quantile[:,2] = self.cosmo.comoving_radial_distance(sky_quantile[:,2]) # Convert the z to comoving distance
+            self.quantiles.append(sky_quantile) # Save the quantiles with the comoving distance
 
         if return_density:
             return self.quantiles, self.density
@@ -264,18 +276,15 @@ class CorrHOD_cutsky(CorrHOD_cubic):
         # Check that the mean n(z) is approx. the same for each quantile
         if hasattr(self, 'quantiles'):
             nquantiles = len(self.quantiles)
-            sky_quantiles = [cartesian_to_sky(self.quantiles[i], self.ds_cosmo) for i in range(nquantiles)] # Convert the quantiles to sky coordinates
-            self.nz_functions = [n_z(sky_quantiles[i][:,2], self.cosmo, edges=edges, area=area) for i in range(nquantiles)] # Compute the n(z) functions
+            self.nz_functions = [n_z(self.quantiles_sky[i][:,2], self.cosmo, edges=edges, area=area) for i in range(nquantiles)] # Compute the n(z) functions
         
         # Get the positions of the galaxies
         if not hasattr(self, 'data_positions'):
             self.get_tracer_positions()
         
-        sky_data = cartesian_to_sky(self.data_positions, self.ds_cosmo)
-        self.nz_data = n_z(sky_data[:,2], self.cosmo, edges=edges, area=area)
+        self.nz_data = n_z(self.data_sky[:,2], self.cosmo, edges=edges, area=area)
         
-        sky_randoms = cartesian_to_sky(self.randoms_positions, self.ds_cosmo)
-        self.nz_randoms = n_z(sky_randoms[:,2], self.cosmo, edges=edges, area=area)
+        self.nz_randoms = n_z(self.randoms_sky[:,2], self.cosmo, edges=edges, area=area)
         
         if hasattr(self, 'nz_functions') and hasattr(self, 'nz_data'):
             return self.nz_data, self.nz_randoms, self.nz_functions
@@ -285,7 +294,9 @@ class CorrHOD_cutsky(CorrHOD_cubic):
     
     
     def downsample_data(self, 
-                        new_n: float):
+                        frac: float=None,
+                        new_n: float=None,
+                        npoints: int=None):
         """
         Downsamples the data to a given number density.
         The number of points in the randoms and the quantiles will be adjusted accordingly.
@@ -314,27 +325,40 @@ class CorrHOD_cutsky(CorrHOD_cubic):
         quantiles : np.ndarray, optional
             The quantiles after downsampling.
         """
+        # TODO Downsample cartesian and sky too 
         
         logger = logging.getLogger('CorrHOD') # Log some info just in case
         
         # First, get the n(z) of the data and quantiles if they exist
         self.get_nz()
         
-        sky_data = cartesian_to_sky(self.data_positions, self.ds_cosmo)
-        mean_n = np.mean(self.nz_data(sky_data[:,2])) # Get the mean n(z) of the data
+        mean_n = np.mean(self.nz_data(self.data_sky[:,2])) # Get the mean n(z) of the data
+        N = len(self.data_positions) # Get the number of galaxies in the data
         
+        # First, check that only one of the three parameters is set
+        if np.sum([frac is not None, new_n is not None, npoints is not None]) != 1:
+            raise ValueError('Only one of the parameters frac, new_n and npoints must be set.')
+        
+        # Then, get the other parameters from the one that is set
+        if frac is not None:
+            npoints = int(frac * N)
+            new_n = mean_n * frac
+        if npoints is not None:
+            frac = npoints / N
+            new_n = mean_n * frac
+        if new_n is not None:
+            frac = new_n / mean_n
+            npoints = int(frac * N)
+        
+        # Check that the new number density is not too small
         if mean_n < new_n or new_n is None:
-            logger.warning(f'Data not downsampled dur to number density {new_n} too small or None')
+            logger.warning(f'Data not downsampled dur to number density {new_n} ({npoints} points) too small or None')
             if not hasattr(self, 'quantiles'):
                 return self.data_positions, self.randoms_positions
             else:
                 return self.data_positions, self.randoms_positions, self.quantiles
         
         # First, downsample the data
-        sky_data = cartesian_to_sky(self.data_positions, self.ds_cosmo) # Get the positions of the galaxies in sky coordinates
-        mean_n = np.mean(self.nz_data(sky_data[:,2])) # Get the mean n(z) of the data
-        N = len(self.data_positions) # Get the number of galaxies in the data
-        
         wanted_number = int(N * new_n / mean_n) # Get the wanted number of galaxies after downsampling
         sample_indices = np.random.choice(N, size=wanted_number, replace=False) # Get the indices of the galaxies to keep
         self.data_positions = self.data_positions[sample_indices] # Keep only the selected galaxies
@@ -412,7 +436,7 @@ class CorrHOD_cutsky(CorrHOD_cubic):
             raise ValueError('The quantiles have not been computed yet. Run compute_DensitySplit first.')
         
         # Get the positions of the points in the quantile
-        quantile_positions = self.quantiles[quantile] # An array of 3 columns (x,y,z)
+        quantile_positions = self.quantiles[quantile] # An array of 3 columns (ra, dec, z)
         quantile_weights = np.ones(len(quantile_positions)) # An array of 1s
         
         # Initialize the dictionary for the correlations
@@ -433,12 +457,11 @@ class CorrHOD_cutsky(CorrHOD_cubic):
         
         # Compute the 2pcf
         xi_quantile = TwoPointCorrelationFunction(mode, edges,
-                                                  data_positions1=quantile_positions,
-                                                  randoms_positions1=self.randoms_positions,
+                                                  data_positions1=quantile_positions.T, # Note the transpose to get the right shape
+                                                  randoms_positions1=self.randoms_positions.T,
                                                   data_weights1=quantile_weights,
                                                   randoms_weights1=self.randoms_weights,
-                                                  los=self.los, 
-                                                  position_type='pos',
+                                                  position_type='rdd',
                                                   mpicomm=mpicomm, mpiroot=mpiroot, num_threads=nthread) 
         
         # Add the 2pcf to the dictionary
@@ -524,16 +547,15 @@ class CorrHOD_cutsky(CorrHOD_cubic):
         
         # Compute the 2pcf
         xi_quantile = TwoPointCorrelationFunction(mode, edges,
-                                                  data_positions1=quantile_positions,
-                                                  data_positions2=self.data_positions,
-                                                  randoms_positions1=self.randoms_positions,
-                                                  randoms_positions2=self.randoms_positions,
+                                                  data_positions1=quantile_positions.T, # Note the transpose to get the right shape
+                                                  data_positions2=self.data_positions.T,
+                                                  randoms_positions1=self.randoms_positions.T,
+                                                  randoms_positions2=self.randoms_positions.T,
                                                   data_weights1=quantile_weights,
                                                   data_weights2=self.data_weights,
                                                   randoms_weights1=self.randoms_weights,
                                                   randoms_weights2=self.randoms_weights,
-                                                  los=self.los,
-                                                  position_type='pos',
+                                                  position_type='rdd',
                                                   mpicomm=mpicomm, mpiroot=mpiroot, num_threads=nthread)
         
         # Add the 2pcf to the dictionary
@@ -606,12 +628,11 @@ class CorrHOD_cutsky(CorrHOD_cubic):
     
         # Compute the 2pcf
         xi = TwoPointCorrelationFunction(mode, edges, 
-                                         data_positions1 = self.data_positions, 
-                                         randoms_positions1 = self.randoms_positions,
+                                         data_positions1 = self.data_positions.T, # Note the transpose to get the right shape 
+                                         randoms_positions1 = self.randoms_positions.T,
                                          data_weights1=self.data_weights,
                                          randoms_weights1=self.randoms_weights,
-                                         los = self.los, 
-                                         position_type = 'pos', 
+                                         position_type = 'rdd', 
                                          mpicomm = mpicomm, mpiroot = mpiroot, num_threads = nthread)
         
         # Add the 2pcf to the dictionary
