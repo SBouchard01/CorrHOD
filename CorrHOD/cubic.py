@@ -398,7 +398,9 @@ class CorrHOD_cubic():
 
 
     def downsample_data(self,
-                        new_n:float):
+                        frac: float=None,
+                        new_n: float=None,
+                        npoints: int=None):
         """
         Downsample the data to a new number of galaxies.
         The quantiles are also downsampled to the same number of galaxies.
@@ -419,8 +421,23 @@ class CorrHOD_cubic():
         """
         logger = logging.getLogger('CorrHOD') # Log some info just in case
         
+        # First, check that only one of the three parameters is set
+        if np.sum([frac is not None, new_n is not None, npoints is not None]) != 1:
+            raise ValueError('Only one of the parameters frac, new_n and npoints must be set.')
+        
         if not hasattr(self, 'nbar'):
             self.nbar = len(self.data_positions) / self.boxsize**3
+        
+        # Then, get the other parameters from the one that is set
+        if frac is not None:
+            npoints = int(frac * N)
+            new_n = self.nbar * frac
+        if npoints is not None:
+            frac = npoints / N
+            new_n = self.nbar * frac
+        if new_n is not None:
+            frac = new_n / self.nbar
+            npoints = int(frac * N)
         
         if new_n is None or new_n > self.nbar : # Do nothing
             logger.warning(f'Data not downsampled dur to number density {new_n} too small or None')
