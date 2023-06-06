@@ -373,6 +373,8 @@ class CorrHOD_cutsky(CorrHOD_cubic):
         sample_indices = np.random.choice(N, size=wanted_number, replace=False) # Get the indices of the galaxies to keep
         self.data_positions = self.data_positions[sample_indices] # Keep only the selected galaxies
         self.data_weights = self.data_weights[sample_indices] # Keep only the selected weights
+        self.data_sky = self.data_sky[sample_indices] # Keep only the selected galaxies in sky coordinates
+        self.data_cartesian = self.data_cartesian[sample_indices] # Keep only the selected galaxies in cartesian coordinates
         
         logger.info(f'Downsampling the data to a number density of {new_n:.2e} h^3/Mpc^3: {len(self.data_positions)} galaxies remaining from {N} galaxies')
         
@@ -382,6 +384,8 @@ class CorrHOD_cutsky(CorrHOD_cubic):
         sample_indices = np.random.choice(N, size=wanted_number, replace=False) # Get the indices of the randoms to keep
         self.randoms_positions = self.randoms_positions[sample_indices] # Keep only the selected randoms
         self.randoms_weights = self.randoms_weights[sample_indices] # Keep only the selected weights
+        self.randoms_sky = self.randoms_sky[sample_indices] # Keep only the selected randoms in sky coordinates
+        self.randoms_cartesian = self.randoms_cartesian[sample_indices] # Keep only the selected randoms in cartesian coordinates
         
         logger.info(f'Downsampling the randoms : {len(self.randoms_positions)} randoms remaining from {N} randoms')
         
@@ -396,6 +400,9 @@ class CorrHOD_cutsky(CorrHOD_cubic):
         for i in range(nquantiles):
             sample_indices = np.random.choice(N, size=wanted_number, replace=False) # Get the indices of the quantiles to keep
             self.quantiles[i] = self.quantiles[i][sample_indices] # Keep only the selected quantiles
+            self.quantiles_weights[i] = self.quantiles_weights[i][sample_indices] # Keep only the selected weights
+            self.quantiles_sky[i] = self.quantiles_sky[i][sample_indices] # Keep only the selected quantiles in sky coordinates
+            self.quantiles_cartesian[i] = self.quantiles_cartesian[i][sample_indices] # Keep only the selected quantiles in cartesian coordinates
         
         logger.info(f'Downsampling the quantiles: {len(self.quantiles[0])} points remaining from {N} points')
         
