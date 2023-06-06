@@ -9,7 +9,7 @@ from densitysplit.pipeline import DensitySplit
 from pycorr import TwoPointCorrelationFunction, project_to_multipoles
 
 from CorrHOD.cubic import CorrHOD_cubic
-from CorrHOD.weights import n_z, w_fkp
+from CorrHOD.weights import n_z, w_fkp, get_quantiles_weight
 
 # Imports specific to packages versions
 try:
@@ -131,8 +131,12 @@ class CorrHOD_cutsky(CorrHOD_cubic):
         # Compute the weights
         self.data_weights, self.randoms_weights = w_fkp(z_data, z_random, self.cosmo, edges=edges, area=area, P0=P0)
  
+        if hasattr(self, 'quantiles'):
+            # Compute the weights for the quantiles
+            self.quantiles_weights = get_quantiles_weight(self.density, self.randoms_weights, nquantiles=len(self.quantiles))
+            return self.data_weights, self.randoms_weights, self.quantiles_weights
+            
         return self.data_weights, self.randoms_weights
-    
     
     
     def compute_DensitySplit(self, 
@@ -189,6 +193,12 @@ class CorrHOD_cutsky(CorrHOD_cubic):
         # Get the positions of the galaxies
         if not hasattr(self, 'data_positions'):
             self.get_tracer_positions()
+        
+        # Set the weights of the galaxies to 1 if they are not set
+        if not hasattr(self, 'data_weights'):
+            self.data_weights = np.ones(len(self.data_positions))
+        if not hasattr(self, 'randoms_weights'):
+            self.randoms_weights = np.ones(len(self.randoms_positions))
 
         try: # Main branch
             logger.debug('Launched densitysplit on main branch')
@@ -439,6 +449,12 @@ class CorrHOD_cutsky(CorrHOD_cubic):
         quantile_positions = self.quantiles[quantile] # An array of 3 columns (ra, dec, z)
         quantile_weights = np.ones(len(quantile_positions)) # An array of 1s
         
+        # Set the weights of the galaxies to 1 if they are not set
+        if not hasattr(self, 'data_weights'):
+            self.data_weights = np.ones(len(self.data_positions))
+        if not hasattr(self, 'randoms_weights'):
+            self.randoms_weights = np.ones(len(self.randoms_positions))
+        
         # Initialize the dictionary for the correlations
         if not hasattr(self, 'CF'):
             self.CF = {} 
@@ -529,6 +545,12 @@ class CorrHOD_cutsky(CorrHOD_cubic):
         if not hasattr(self, 'data_positions'):
             self.get_tracer_positions()
         
+        # Set the weights of the galaxies to 1 if they are not set
+        if not hasattr(self, 'data_weights'):
+            self.data_weights = np.ones(len(self.data_positions))
+        if not hasattr(self, 'randoms_weights'):
+            self.randoms_weights = np.ones(len(self.randoms_positions))
+        
         # Initialize the dictionary for the correlations
         if not hasattr(self, 'CF'):
             self.CF = {} 
@@ -609,6 +631,12 @@ class CorrHOD_cutsky(CorrHOD_cubic):
         # Get the positions of the galaxies
         if not hasattr(self, 'data_positions'):
             self.get_tracer_positions()
+        
+        # Set the weights of the galaxies to 1 if they are not set
+        if not hasattr(self, 'data_weights'):
+            self.data_weights = np.ones(len(self.data_positions))
+        if not hasattr(self, 'randoms_weights'):
+            self.randoms_weights = np.ones(len(self.randoms_positions))
         
         # Initialize the dictionary for the correlations
         if not hasattr(self, 'CF'):
