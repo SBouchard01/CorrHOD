@@ -42,7 +42,11 @@ def sky_fraction(ra, dec, nside=256):
     
     return fsky
 
-def comoving_volume(cosmo, z_min, z_max, area: float = 14000, fsky: float = None):
+def comoving_volume(cosmo, 
+                    z_min, 
+                    z_max, 
+                    area: float = 14000, 
+                    fsky: float = None):
     """ 
     Computes the comoving volume associated to the redshift bin [`z_min`, `z_max`].
 
@@ -140,7 +144,11 @@ def ScottsBinEdges(data) -> np.ndarray :
     return edges
 
 
-def n_z(z, cosmo, edges: list = None, area: float = 14000, fsky:float=None) -> InterpolatedUnivariateSpline:
+def n_z(z, 
+        cosmo, 
+        edges: list = None, 
+        area: float = 14000, 
+        fsky:float=None) -> InterpolatedUnivariateSpline:
     """ 
     Computes the number density of galaxies in the data in the given redshift bin.
 
@@ -198,7 +206,13 @@ def n_z(z, cosmo, edges: list = None, area: float = 14000, fsky:float=None) -> I
     return n_func
     
 
-def w_fkp(z_data, z_random, cosmo, edges: list = None, area: float = 14000, fsky: float = None, P0: float = 7000, verbose: bool = False):
+def w_fkp(z_data, 
+          z_random, 
+          cosmo, 
+          edges: list = None, 
+          area: float = 14000, 
+          fsky: float = None, 
+          P0: float = 7000):
     """ 
     Computes the FKP weights for the data, and returns a column containing the FKP weights. (If cuts need to be applied, they should be applied before calling this function.)
 
@@ -227,9 +241,6 @@ def w_fkp(z_data, z_random, cosmo, edges: list = None, area: float = 14000, fsky
         P0: float, optional
             The power spectrum normalization (TODO : Check this definition). Defaults to `7000` for the BGS.
         
-        verbose: bool, optional
-            verbosity. Defaults to `False`.
-
     Returns
     -------
         weight_data: array_like
@@ -246,11 +257,41 @@ def w_fkp(z_data, z_random, cosmo, edges: list = None, area: float = 14000, fsky
     # Compute the number density
     n_func = n_z(z_random, cosmo, edges=edges, area=area, fsky=fsky) # Number density as a function of redshift, computed from the randoms (the data should follow the same distribution as the randoms)
     
-    n_data = n_func(z_data) # Number density at the redshift of the data
-    n_random = n_func(z_random) # Number density at the redshift of the randoms
+    # Re-normalize n(z) to the total size of the data catalog
+    alpha = 1.0 * len(z_data) / len(z_random)
     
+    n_data = n_func(z_data) * alpha # Number density at the redshift of the data
+    n_random = n_func(z_random) * alpha # Number density at the redshift of the randoms
+
     # Compute the FKP weights
     weight_data = 1.0 / (1 + n_data*P0)
     weight_random = 1.0 / (1 + n_random*P0)
     
     return weight_data, weight_random
+
+
+
+from pandas import qcut
+def get_quantiles_weight(density, 
+                         randoms_weights,
+                         nquantiles=10):
+    """
+    Gets the weights of the quantiles of the density.
+
+    Parameters
+    ----------
+    density : array_like
+        The density of the data.
+        
+    randoms_weights : array_like
+        The weights of the randoms.
+        
+    nquantiles : int, optional
+        The number of quantiles to use. Defaults to `10`.
+    """
+    quantiles_idx = qcut(density, nquantiles, labels=False)
+    quantiles_weights = []
+    for i in range(nquantiles):
+        quantiles_weights.append(randoms_weights[quantiles_idx == i])
+    
+    return quantiles_weights
