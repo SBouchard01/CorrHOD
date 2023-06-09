@@ -162,7 +162,7 @@ class CorrHOD_cubic():
         # Log the number density of the populated halos
         logger = logging.getLogger('CorrHOD') # Get the logger for the CorrHOD class
         actual_n = len(self.cubic_dict['LRG']['x']) / self.boxsize**3
-        logger.debug(f'Number density of the populated halos : {actual_n:.3e} h^3/Mpc^3')
+        logger.debug(f'Number density of the populated halos : {actual_n:.2e} h^3/Mpc^3')
         
         # Check that the number density of the populated halos is close to the target number density
         if self.data_params is not None:
@@ -170,7 +170,7 @@ class CorrHOD_cubic():
             std_n = self.data_params['tracer_density_std'][self.tracer]
         
             if abs(expected_n - actual_n) > std_n :
-                warn(f'The number density of the populated halos ({actual_n}) is not close to the target number density ({expected_n}).', UserWarning) 
+                warn(f'The number density of the populated halos ({actual_n:.2e}) is not close to the target number density ({expected_n}).', UserWarning) 
 
         self.nbar = actual_n
         return self.cubic_dict
@@ -428,6 +428,8 @@ class CorrHOD_cubic():
         if not hasattr(self, 'nbar'):
             self.nbar = len(self.data_positions) / self.boxsize**3
         
+        N = len(self.data_positions)
+        
         # Then, get the other parameters from the one that is set
         if frac is not None:
             npoints = int(frac * N)
@@ -443,7 +445,6 @@ class CorrHOD_cubic():
             logger.warning(f'Data not downsampled dur to number density {new_n} too small or None')
             return self.data_positions, self.quantiles
         
-        N = len(self.data_positions)
         wanted_number = int(new_n*self.boxsize**3) # Get the wanted number of galaxies in the box
         sample_indices = np.random.choice(len(self.data_positions), size=wanted_number, replace=False)
         self.data_positions = self.data_positions[sample_indices]
@@ -1106,7 +1107,7 @@ class CorrHOD_cubic():
                 
                 # Downsample the galaxies if needed
                 if downsample_to is not None:
-                    self.downsample_data(downsample_to)
+                    self.downsample_data(new_n=downsample_to)
                     logger.info(f'Downsampled the galaxies to {downsample_to:.2e} h^3/Mpc^3\n')
                     
             else:
