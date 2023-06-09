@@ -335,7 +335,6 @@ class CorrHOD_cutsky(CorrHOD_cubic):
         quantiles : np.ndarray, optional
             The quantiles after downsampling.
         """
-        # TODO Downsample cartesian and sky too 
         
         logger = logging.getLogger('CorrHOD') # Log some info just in case
         
@@ -452,15 +451,20 @@ class CorrHOD_cutsky(CorrHOD_cubic):
         if not hasattr(self, 'quantiles'):
             raise ValueError('The quantiles have not been computed yet. Run compute_DensitySplit first.')
         
+        # Get the positions of the galaxies
+        if not hasattr(self, 'randoms_positions'):
+            self.get_tracer_positions()
+        
         # Get the positions of the points in the quantile
         quantile_positions = self.quantiles[quantile] # An array of 3 columns (ra, dec, z)
-        quantile_weights = np.ones(len(quantile_positions)) # An array of 1s
         
         # Set the weights of the galaxies to 1 if they are not set
-        if not hasattr(self, 'data_weights'):
-            self.data_weights = np.ones(len(self.data_positions))
         if not hasattr(self, 'randoms_weights'):
             self.randoms_weights = np.ones(len(self.randoms_positions))
+        if not hasattr(self, 'quantiles_weights'):
+            quantile_weights = np.ones(len(quantile_positions))
+        else:
+            quantile_weights = self.quantiles_weights[quantile]
         
         # Initialize the dictionary for the correlations
         if not hasattr(self, 'CF'):
@@ -546,7 +550,6 @@ class CorrHOD_cutsky(CorrHOD_cubic):
         
         # Get the positions of the points in the quantile
         quantile_positions = self.quantiles[quantile] # An array of 3 columns (x,y,z)
-        quantile_weights = np.ones(len(quantile_positions)) # An array of 1s
         
         # Get the positions of the galaxies
         if not hasattr(self, 'data_positions'):
@@ -557,7 +560,11 @@ class CorrHOD_cutsky(CorrHOD_cubic):
             self.data_weights = np.ones(len(self.data_positions))
         if not hasattr(self, 'randoms_weights'):
             self.randoms_weights = np.ones(len(self.randoms_positions))
-        
+        if not hasattr(self, 'quantiles_weights'):
+            quantile_weights = np.ones(len(quantile_positions))
+        else:
+            quantile_weights = self.quantiles_weights[quantile]
+            
         # Initialize the dictionary for the correlations
         if not hasattr(self, 'CF'):
             self.CF = {} 
