@@ -1,0 +1,11 @@
+name: CorrHOD-docs
+
+channels:
+- defaults
+- conda-forge
+
+dependencies:
+- python=3.8
+- numpy
+- scipy
+- pandas
