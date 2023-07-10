@@ -17,6 +17,8 @@ Strict requirements are :
 
 *Note : The densitysplit package is not yet available on pip, so you will have to install it manually first. I recommend using the `openmp` branch, which is MPI-compatible and faster than the master branch.*
 
+*Also, the cosmoprimo, mockfactory and pycorr packages might not be available on pip either. See their documentations on how to install them.*
+
 ## Installation
 
 ### Pip install
@@ -40,13 +42,13 @@ Examples can be found under the `examples` directory.
 
 
 ## TODO-list of the project
-- [X] Implement cutsky class
-  - [X] Implement downsampling function
+- [x] Implement cutsky class
+  - [x] Implement downsampling function
   - [ ] Create cutsky from boxes (see mockfactory)
   - [ ] Create randoms from cutsky (see mockfactory)
   - [ ] Implement `read_cutsky` function (name to be changed)
   - [ ] Implement `run_all` function
-- [ ] Make the package pip-installable
+- [x] Make the package pip-installable
 - [ ] Create documentation
 - [ ] Create examples
   - [ ] Modify cubic example
