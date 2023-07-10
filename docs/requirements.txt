@@ -1,1 +1,4 @@
+# These requirements are here to avoid crashes when trying to install mockfactory.
+# because mockfactory tries to install pmesh, which requires numpy and cython and fails to install them ?.
 numpy
+cython
