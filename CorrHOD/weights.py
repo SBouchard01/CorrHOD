@@ -45,7 +45,7 @@ def sky_fraction(ra, dec, nside=256):
 def comoving_volume(cosmo, 
                     z_min, 
                     z_max, 
-                    area: float = 14000, 
+                    area: float = None, 
                     fsky: float = None):
     """ 
     Computes the comoving volume associated to the redshift bin [`z_min`, `z_max`].
@@ -65,7 +65,7 @@ def comoving_volume(cosmo,
             Must be of the same format as `z_min` and same length if it is an array.
         
         area: float, optional
-            The area of the survey in square degrees. Defaults to `14000` (the area of the DESI footprint).
+            The area of the survey in square degrees. Defaults to `None`.
         
         fsky: float, optional
             The fraction of the sky covered by the survey. Can be provided instead of area. Defaults to `None`.
@@ -147,7 +147,7 @@ def ScottsBinEdges(data) -> np.ndarray :
 def n_z(z, 
         cosmo, 
         edges: list = None, 
-        area: float = 14000, 
+        area: float = None, 
         fsky:float=None) -> InterpolatedUnivariateSpline:
     """ 
     Computes the number density of galaxies in the data in the given redshift bin.
@@ -166,7 +166,7 @@ def n_z(z,
             If set to `None`, the edges are computed using Scott's rule. Defaults to `None`.
         
         area: float, optional
-            The area of the survey in square degrees. Defaults to `14000` (the area of the DESI footprint).
+            The area of the survey in square degrees. Defaults to `None`.
         
         fsky: float, optional
             The fraction of the sky covered by the survey. Can be provided instead of area. Defaults to `None`.
@@ -204,13 +204,13 @@ def n_z(z,
     # Interpolate the number density as a function of redshift
     n_func = InterpolatedUnivariateSpline(bin_centers, nbar, ext='zeros') # (ext='zeros' means that the number density is set to zero outside of the redshift range of the data)
     return n_func
-    
+
 
 def w_fkp(z_data, 
           z_random, 
           cosmo, 
           edges: list = None, 
-          area: float = 14000, 
+          area: float = None, 
           fsky: float = None, 
           P0: float = 7000):
     """ 
@@ -233,7 +233,7 @@ def w_fkp(z_data,
             If set to `None`, the edges are computed using Scott's rule. Defaults to `None`.
         
         area: float, optional
-            The area of the survey in square degrees. Defaults to `14000` (the area of the DESI footprint).
+            The area of the survey in square degrees. Defaults to `None`.
         
         fsky: float, optional
             The fraction of the sky covered by the survey. Can be provided instead of area. Defaults to `None`.

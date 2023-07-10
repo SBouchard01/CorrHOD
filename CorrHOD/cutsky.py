@@ -9,7 +9,7 @@ from densitysplit.pipeline import DensitySplit
 from pycorr import TwoPointCorrelationFunction, project_to_multipoles
 
 from CorrHOD.cubic import CorrHOD_cubic
-from CorrHOD.weights import n_z, w_fkp, get_quantiles_weight
+from CorrHOD.weights import n_z, w_fkp, get_quantiles_weight, sky_fraction
 
 # Imports specific to packages versions
 try:
@@ -42,6 +42,7 @@ class CorrHOD_cutsky(CorrHOD_cubic):
     # TODO : Add a way to read the cutsky from a file 
     
     # TODO : create_randoms method
+    
     
     
     
@@ -99,10 +100,12 @@ class CorrHOD_cutsky(CorrHOD_cubic):
     
     def get_tracer_weights(self,
                     edges:list=None,
-                    area:float=14000,
+                    area:float=None,
+                    fsky:float=None,
                     P0:float=7000):
         """
         Compute the weights for the tracer and the randoms.
+        Note : If neither `area` nor `fsky` are set, the sky fraction of the data will be computed, using the current data sky positions.
         
         Parameters
         ----------
@@ -111,7 +114,10 @@ class CorrHOD_cutsky(CorrHOD_cubic):
             If set to `None`, the edges are computed using Scott's rule. Defaults to `None`.
         
         area: float, optional
-            The area of the survey in square degrees. Defaults to `14000` (the area of the DESI footprint).
+            The area of the survey in square degrees. Defaults to `None`.
+            
+        fsky: float, optional
+            The fraction of the sky covered by the survey. Defaults to `None`.
         
         P0: float, optional
             The power spectrum normalization (TODO : Check this definition). Defaults to `7000` for the BGS.        
@@ -124,12 +130,17 @@ class CorrHOD_cutsky(CorrHOD_cubic):
         randoms_weights : array_like
             The weights of the randoms.
         """
+        # Get the sky fraction if it is not set
+        if fsky is None and area is None:
+            ra = self.randoms_sky[:,0]
+            dec = self.randoms_sky[:,1]
+            fsky = sky_fraction(ra, dec)
         
         z_data = self.data_positions[:,2]
         z_random = self.randoms_positions[:,2]        
         
         # Compute the weights
-        self.data_weights, self.randoms_weights = w_fkp(z_data, z_random, self.cosmo, edges=edges, area=area, P0=P0)
+        self.data_weights, self.randoms_weights = w_fkp(z_data, z_random, self.cosmo, edges=edges, area=area, fsky=fsky, P0=P0)
  
         if hasattr(self, 'quantiles'):
             # Compute the weights for the quantiles
@@ -188,7 +199,7 @@ class CorrHOD_cutsky(CorrHOD_cubic):
         density : np.ndarray, optional
             The density field. It is a (N,3) array.
         """
-        logger = logging.getLogger('DS') #tmp
+        logger = logging.getLogger('DensitySplit') #tmp
         
         # Get the positions of the galaxies
         if not hasattr(self, 'data_positions'):
@@ -258,10 +269,11 @@ class CorrHOD_cutsky(CorrHOD_cubic):
     
     def get_nz(self,
                edges:list=None,
-               area:float=14000,
+               area:float=None,
                fsky:float=None):
         """
         Computes the n(z) function of the data and the quantiles (if they exist).
+        Note : If neither `area` nor `fsky` are set, the sky fraction of the data will be computed, using the current data sky positions.
 
         Parameters
         ----------
@@ -270,7 +282,10 @@ class CorrHOD_cutsky(CorrHOD_cubic):
             If set to `None`, the edges are computed using Scott's rule. Defaults to `None`.
         
         area: float, optional
-            The area of the survey in square degrees. Defaults to `14000` (the area of the DESI footprint).
+            The area of the survey in square degrees. Defaults to `None`.
+        
+        fsky: float, optional
+            The fraction of the sky covered by the survey. Defaults to `None`.
 
         Returns
         -------
@@ -283,18 +298,24 @@ class CorrHOD_cutsky(CorrHOD_cubic):
         nz_functions : list, optional
             The n(z) function for each quantile. It is a list of InterpolatedUnivariateSpline objects.
         """
+        # Get the sky fraction if it is not set
+        if fsky is None and area is None:
+            ra = self.randoms_sky[:,0]
+            dec = self.randoms_sky[:,1]
+            fsky = sky_fraction(ra, dec)
+        
         # Check that the mean n(z) is approx. the same for each quantile
         if hasattr(self, 'quantiles'):
             nquantiles = len(self.quantiles)
-            self.nz_functions = [n_z(self.quantiles_sky[i][:,2], self.cosmo, edges=edges, area=area) for i in range(nquantiles)] # Compute the n(z) functions
+            self.nz_functions = [n_z(self.quantiles_sky[i][:,2], self.cosmo, edges=edges, area=area, fsky=fsky) for i in range(nquantiles)] # Compute the n(z) functions
         
         # Get the positions of the galaxies
         if not hasattr(self, 'data_positions'):
             self.get_tracer_positions()
         
-        self.nz_data = n_z(self.data_sky[:,2], self.cosmo, edges=edges, area=area)
+        self.nz_data = n_z(self.data_sky[:,2], self.cosmo, edges=edges, area=area, fsky=fsky)
         
-        self.nz_randoms = n_z(self.randoms_sky[:,2], self.cosmo, edges=edges, area=area)
+        self.nz_randoms = n_z(self.randoms_sky[:,2], self.cosmo, edges=edges, area=area, fsky=fsky)
         
         if hasattr(self, 'nz_functions') and hasattr(self, 'nz_data'):
             return self.nz_data, self.nz_randoms, self.nz_functions
@@ -361,7 +382,7 @@ class CorrHOD_cutsky(CorrHOD_cubic):
         
         # Check that the new number density is not too small
         if mean_n < new_n or new_n is None:
-            logger.warning(f'Data not downsampled dur to number density {new_n} ({npoints} points) too small or None')
+            logger.warning(f'Data not downsampled due to number density {new_n:.2e} ({npoints} points) too small or None')
             if not hasattr(self, 'quantiles'):
                 return self.data_positions, self.randoms_positions
             else:
