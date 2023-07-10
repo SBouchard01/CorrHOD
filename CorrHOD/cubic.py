@@ -117,7 +117,8 @@ class CorrHOD_cubic():
             AbacusHOD object containing the simulation.
         """
         # Create the AbacusHOD object and load the simulation
-        self.Ball = AbacusHOD(self.sim_params, self.config_HOD_params)
+        if not hasattr(self, 'Ball'): # To avoid loading the slabs if they are already loaded
+            self.Ball = AbacusHOD(self.sim_params, self.config_HOD_params)
         
         # Update the parameters of the AbacusHOD object
         self.Ball.params['Lbox'] = self.boxsize
@@ -138,7 +139,7 @@ class CorrHOD_cubic():
     
     
     
-    def populate_halos(self, nthread:int = 16):
+    def populate_halos(self, nthread:int = 16, remove_Ball:bool = False):
         """
         Populates the halos with galaxies using the HOD parameters.
         
@@ -146,6 +147,10 @@ class CorrHOD_cubic():
         ----------
         nthread : int, optional
             Number of threads to use. Defaults to 16.
+            
+        remove_Ball : bool, optional
+            If True, the Ball object (Dark matter simulation loaded from AbacusHOD) is removed after populating the halos. 
+            This is useful to save memory. Defaults to False.
 
         Returns
         -------
@@ -171,6 +176,11 @@ class CorrHOD_cubic():
         
             if abs(expected_n - actual_n) > std_n :
                 warn(f'The number density of the populated halos ({actual_n:.2e}) is not close to the target number density ({expected_n}).', UserWarning) 
+
+        # Remove the Ball object to save memory
+        if remove_Ball:
+            del self.Ball
+            logger.debug('Removed the Ball object to save memory')
 
         self.nbar = actual_n
         return self.cubic_dict
@@ -347,7 +357,7 @@ class CorrHOD_cubic():
         density : np.ndarray, optional
             The density field. It is a (N,3) array.
         """
-        logger = logging.getLogger('DS') #tmp
+        logger = logging.getLogger('DensitySplit') #tmp
         
         # Get the positions of the galaxies
         if not hasattr(self, 'data_positions'):
@@ -416,8 +426,9 @@ class CorrHOD_cubic():
         data_positions : np.ndarray
             The positions of the galaxies after downsampling. It is a (N,3) array.
             
-        quantiles : np.ndarray
+        quantiles : np.ndarray, optional
             The quantiles after downsampling. It is a (nquantiles,N,3) array.
+            Returns None if the quantiles have not been computed yet.
         """
         logger = logging.getLogger('CorrHOD') # Log some info just in case
         
@@ -442,7 +453,7 @@ class CorrHOD_cubic():
             npoints = int(frac * N)
         
         if new_n is None or new_n > self.nbar : # Do nothing
-            logger.warning(f'Data not downsampled dur to number density {new_n} too small or None')
+            logger.warning(f'Data not downsampled due to number density {new_n} too small or None')
             return self.data_positions, self.quantiles
         
         wanted_number = int(new_n*self.boxsize**3) # Get the wanted number of galaxies in the box
@@ -450,6 +461,9 @@ class CorrHOD_cubic():
         self.data_positions = self.data_positions[sample_indices]
         
         logger.info(f'Downsampling the data to a number density of {new_n:.2e} h^3/Mpc^3: {len(self.data_positions)} galaxies remaining from {N} galaxies')
+        
+        if not hasattr(self, 'quantiles'):
+            return self.data_positions, None
         
         # Downsample the quantiles to the new number of galaxies (with the same proportions)
         for i in range(len(self.quantiles)):
@@ -937,6 +951,7 @@ class CorrHOD_cubic():
                 exit_on_underpopulated:bool = False,
                 los_to_compute='average',
                 downsample_to:float = None,
+                remove_Ball:bool = False,
                 # Parameters for the DensitySplit
                 smooth_radius:float = 10,
                 cellsize:float = 5,
@@ -977,6 +992,10 @@ class CorrHOD_cubic():
             If provided, the galaxies will be randomly downsampled to the provided number density in h^3/Mpc^3 before computing the CFs. 
             This can be useful to reduce the computation time.
             Defaults to None.
+            
+        remove_Ball : bool, optional
+            If True, the Ball object (Dark matter simulation loaded from AbacusHOD) is removed after populating the halos. 
+            This is useful to save memory. Defaults to False.
             
         smooth_radius : float, optional
             The radius of the Gaussian smoothing in Mpc/h used in the densitysplit. 
@@ -1064,7 +1083,7 @@ class CorrHOD_cubic():
             with catch_warnings():
                 filterwarnings("error") 
                 try : 
-                    self.populate_halos() # Populate the halos
+                    self.populate_halos(nthread=nthread, remove_Ball=remove_Ball) # Populate the halos
                 except UserWarning as w: # Catch the warning if needed
                     logger.warning('Warning : ' + str(w)) # Display the warning without triggering the error
                     if exit_on_underpopulated: 
@@ -1100,7 +1119,8 @@ class CorrHOD_cubic():
                                           nquantiles=nquantiles,
                                           sampling=sampling, 
                                           filter_shape=filter_shape,
-                                          return_density=False)
+                                          return_density=False,
+                                          nthread=nthread)
                 
                 self.times_dict[los]['compute_DensitySplit'] = time()-tmp_time
                 logger.info(f"Computed the DensitySplit in {self.times_dict[los]['compute_DensitySplit']:.2f} s\n")
