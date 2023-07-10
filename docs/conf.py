@@ -44,7 +44,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # -- Autodoc configuration ---------------------------------------------------
 # Mock imports that can't be resolved during documentation build
-autodoc_mock_imports = ['mpi4py', 'cython']
+autodoc_mock_imports = ['pmesh']
 
 
 # -- Options for HTML output -------------------------------------------------
