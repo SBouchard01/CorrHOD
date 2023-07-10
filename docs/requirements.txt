@@ -2,3 +2,4 @@
 # because mockfactory tries to install pmesh, which requires numpy and cython and fails to install them ?.
 numpy
 cython
+mpi4py
