@@ -20,10 +20,10 @@ setup(
     install_requires=[
         'numpy',
         'pandas',
-        'cosmoprimo @ git+https://github.com/cosmodesi/cosmoprimo#egg=cosmoprimo[class,camb,astropy,extras]',
+        'cosmoprimo[class,camb,astropy,extras] @ git+https://github.com/cosmodesi/cosmoprimo',
         'abacusutils',
         'densitysplit @ git+https://github.com/epaillas/densitysplit@openmp',
         'mockfactory @ git+https://github.com/cosmodesi/mockfactory',
-        'pycorr @ git+https://github.com/cosmodesi/pycorr#egg=pycorr[mpi,jackknife,corrfunc]'
+        'pycorr[mpi,jackknife,corrfunc] @ git+https://github.com/cosmodesi/pycorr'
     ]
 )
