@@ -22,7 +22,7 @@ setup(
         'pandas',
         'cosmoprimo @ git+https://github.com/cosmodesi/cosmoprimo#egg=cosmoprimo[class,camb,astropy,extras]',
         'abacusutils',
-        'densitysplit @ git+https://github.com/epaillas/densitysplit',
+        'densitysplit @ git+https://github.com/epaillas/densitysplit@openmp',
         'mockfactory @ git+https://github.com/cosmodesi/mockfactory',
         'pycorr @ git+https://github.com/cosmodesi/pycorr#egg=pycorr[mpi,jackknife,corrfunc]'
     ]
