@@ -7,8 +7,8 @@ https://github.com/pypa/sampleproject
 from setuptools import setup, find_packages
 
 setup(
-    name = 'CorrHOD',  # Required
-    version = '0.1',  # Required
+    name = 'CorrHOD',  
+    version = '0.1',  
     description = 'Correlation function estimation using HOD parameters',  
     url = 'https://github.com/SBouchard01/CorrHOD',
     author = 'Simon Bouchard',
@@ -20,10 +20,10 @@ setup(
     install_requires=[
         'numpy',
         'pandas',
-        'cosmoprimo',
+        'cosmoprimo @ git+https://github.com/cosmodesi/cosmoprimo#egg=cosmoprimo[class,camb,astropy,extras]',
         'abacusutils',
-        'densitysplit',
-        'mockfactory',
-        'pycorr'
+        'densitysplit @ git+https://github.com/epaillas/densitysplit',
+        'mockfactory @ git+https://github.com/cosmodesi/mockfactory',
+        'pycorr @ git+https://github.com/cosmodesi/pycorr#egg=pycorr[mpi,jackknife,corrfunc]'
     ]
 )
