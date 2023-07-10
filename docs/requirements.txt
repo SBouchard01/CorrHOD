@@ -1,6 +1,9 @@
 # These requirements are here to avoid crashes when trying to install mockfactory.
 # because mockfactory tries to install pmesh, which requires numpy and cython and fails to install them ?.
 numpy
-Cython
 mpsort
 pfft-python
+
+# Also, the Sphinx package does not support C-based extensions, so we need to install them manually 
+# Cython
+# mpi4py
