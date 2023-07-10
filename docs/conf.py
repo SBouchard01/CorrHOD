@@ -34,6 +34,7 @@ extensions = [
     'sphinx.ext.autodoc', # For automatically documenting the functions
     'sphinx.ext.napoleon', # For documenting the parameters of the functions
     'sphinx.ext.intersphinx', # For linking to other packages' documentation
+    'sphinx.ext.viewcode', # For linking to the source code
     'sphinx_book_theme'
 ]
 
