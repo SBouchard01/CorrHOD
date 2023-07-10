@@ -31,7 +31,9 @@ release = '0.1'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
+    'sphinx.ext.autodoc', # For automatically documenting the functions
+    'sphinx.ext.napoleon', # For documenting the parameters of the functions
+    'sphinx.ext.intersphinx', # For linking to other packages' documentation
     'sphinx_book_theme'
 ]
 
