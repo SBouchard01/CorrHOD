@@ -35,7 +35,6 @@ extensions = [
     'sphinx.ext.napoleon', # For documenting the parameters of the functions
     'sphinx.ext.intersphinx', # For linking to other packages' documentation
     'sphinx.ext.viewcode', # For linking to the source code
-    'sphinx_book_theme'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -49,7 +48,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # -- Autodoc configuration ---------------------------------------------------
 # Mock imports that can't be resolved during documentation build
-# autodoc_mock_imports = ['pmesh', 'mockfactory', 'Cython']
+autodoc_mock_imports = ['pmesh', 'mockfactory', 'Cython']
 
 
 # -- Options for HTML output -------------------------------------------------
