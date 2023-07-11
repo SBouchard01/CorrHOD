@@ -65,6 +65,15 @@ autoclass_content = 'both' # Include both the class docstring and the __init__ d
 html_theme = 'sphinx_rtd_theme' # For readthedocs.io
 # html_theme = 'sphinx_book_theme'
 
+html_show_sourcelink = False
+html_theme_options = {
+    "use_edit_page_button": True,
+    "use_issues_button": True,
+    "use_repository_button": True,
+    "use_download_button": True,
+    "use_fullscreen_button": False,
+}
+
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
