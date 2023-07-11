@@ -1,7 +1,7 @@
 CorrHOD
 =======
 
-.. toctree::
-   :maxdepth: 4
+.. autosummary::
+   :toctree: generated
 
    CorrHOD

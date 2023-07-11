@@ -50,6 +50,8 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # Mock imports that can't be resolved during documentation build
 autodoc_mock_imports = ['cosmoprimo', 'mockfactory', 'pycorr', 'Corrfunc', 'pyrecon']
 
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
 
 # -- Options for HTML output -------------------------------------------------
 
