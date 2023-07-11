@@ -12,10 +12,7 @@ sphinx:
 # Optionally set the version of Python and requirements required to build your docs
 # conda:
 #    environment: docs/environment.yaml # Conda env in which to build docs
-build:
-  tools:
-    pip: "22.1.2"
-    
+
 python:
   install:
   - method: pip
