@@ -43,7 +43,7 @@ Please report bugs and ask questions by opening an issue in that repository.
    :maxdepth: 2
    :caption: Tutorials
 
-   ../examples
+   ..include:: ../examples
 
 .. toctree::
    :maxdepth: 2
