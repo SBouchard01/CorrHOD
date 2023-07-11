@@ -5,6 +5,19 @@ https://github.com/pypa/sampleproject
 """
 
 from setuptools import setup, find_packages
+import os
+
+install_requires=[
+        'numpy',
+        'pandas',
+        'abacusutils',
+        'densitysplit @ git+https://github.com/epaillas/densitysplit@openmp',        
+    ]
+
+if not os.getenv('READTHEDOCS'):
+    install_requires.append('cosmoprimo[class,camb,astropy,extras] @ git+https://github.com/cosmodesi/cosmoprimo')
+    install_requires.append('mockfactory @ git+https://github.com/cosmodesi/mockfactory')
+    install_requires.append('pycorr[mpi,jackknife,corrfunc] @ git+https://github.com/cosmodesi/pycorr')
 
 setup(
     name = 'CorrHOD',  
@@ -16,14 +29,6 @@ setup(
     packages = find_packages(),
     python_requires='>=3.6, <4',
     license = 'MIT',
-    include_package_data=True,
-    install_requires=[
-        'numpy',
-        'pandas',
-        'cosmoprimo[class,camb,astropy,extras] @ git+https://github.com/cosmodesi/cosmoprimo',
-        'abacusutils',
-        'densitysplit @ git+https://github.com/epaillas/densitysplit@openmp',
-        'mockfactory @ git+https://github.com/cosmodesi/mockfactory',
-        'pycorr[mpi,jackknife,corrfunc] @ git+https://github.com/cosmodesi/pycorr'
-    ]
+    include_package_data = True,
+    install_requires = install_requires
 )
