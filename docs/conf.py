@@ -55,6 +55,7 @@ napoleon_numpy_docstring = True
 
 autodoc_preserve_defaults = True # Keep the default values of the parameters instead of replacing them with their values
 autoclass_content = 'both' # Include both the class docstring and the __init__ docstring in the documentation
+autodoc_member_order = 'bysource' # Order the members by the order in the source code
 
 # -- Options for HTML output -------------------------------------------------
 
