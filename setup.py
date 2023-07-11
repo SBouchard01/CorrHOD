@@ -10,6 +10,7 @@ import os
 install_requires=[
         'numpy',
         'pandas',
+        'healpy',
         'densitysplit @ git+https://github.com/epaillas/densitysplit@openmp',        
     ]
 
