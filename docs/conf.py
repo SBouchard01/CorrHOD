@@ -48,7 +48,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # -- Autodoc configuration ---------------------------------------------------
 # Mock imports that can't be resolved during documentation build
-autodoc_mock_imports = ['pmesh', 'mockfactory', 'Cython']
+autodoc_mock_imports = ['cosmoprimo', 'mockfactory', 'pycorr']
 
 
 # -- Options for HTML output -------------------------------------------------
