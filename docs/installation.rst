@@ -6,11 +6,12 @@ Installation
 Requirements
 ------------
 CorrHOD is designed to work on python 3.6 and above. It requires the following packages:
+
 * `numpy <http://www.numpy.org/>`_
 * `pandas <https://pandas.pydata.org/>`_
 * `healpy <https://healpy.readthedocs.io/en/latest/>`_
 * `densitysplit <https://github.com/epaillas/densitysplit>`_ (OpenMP branch)
-* `abacusutils <https://abacusutils.readthedocs.io/en/latest/>`_
+* AbacusHOD (from `abacusutils <https://abacusutils.readthedocs.io/en/latest/>`_)
 * `cosmoprimo <https://cosmoprimo.readthedocs.io/en/latest/>`_
 * `pycorr <https://py2pcf.readthedocs.io/en/latest/>`_
 * `mockfactory <https://github.com/cosmodesi/mockfactory>`_
@@ -55,12 +56,14 @@ If you want to hack on the CorrHOD source code, it is best to clone the GitHub
 repository install the package in pip "editable mode":
 
 ::
+
     $ git clone https://github.com/SBouchard01/CorrHOD.git
     $ cd CorrHOD
     $ python setup.py develop --user
 
 .. note::
     You can also git clone the package without developer mode ::
+
         $ git clone https://github.com/SBouchard01/CorrHOD.git
         $ cd CorrHOD
         $ python setup.py install --user
