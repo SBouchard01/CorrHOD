@@ -53,6 +53,8 @@ autodoc_mock_imports = ['cosmoprimo', 'mockfactory', 'pycorr', 'Corrfunc', 'pyre
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 
+autodoc_preserve_defaults = True # Keep the default values of the parameters instead of replacing them with their values
+
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
