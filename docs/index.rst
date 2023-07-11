@@ -42,7 +42,7 @@ Please report bugs and ask questions by opening an issue in that repository.
    :maxdepth: 2
    :caption: Tutorials
 
-   ../examples/Using_CorrHOD.ipynb
+   ../examples
 
 .. toctree::
    :maxdepth: 2

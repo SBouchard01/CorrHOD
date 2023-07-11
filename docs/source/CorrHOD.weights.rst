@@ -1,4 +1,4 @@
-CorrHOD.weights module
+CorrHOD.weights
 ======================
 
 .. automodule:: CorrHOD.weights

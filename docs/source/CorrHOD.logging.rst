@@ -1,4 +1,4 @@
-CorrHOD.logging module
+CorrHOD.logging
 ======================
 
 .. automodule:: CorrHOD.logging

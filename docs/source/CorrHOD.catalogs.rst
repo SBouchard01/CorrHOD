@@ -1,4 +1,4 @@
-CorrHOD.catalogs module
+CorrHOD.catalogs
 =======================
 
 .. automodule:: CorrHOD.catalogs

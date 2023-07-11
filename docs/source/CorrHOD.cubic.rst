@@ -1,4 +1,4 @@
-CorrHOD.cubic module
+CorrHOD.cubic
 ====================
 
 .. automodule:: CorrHOD.cubic

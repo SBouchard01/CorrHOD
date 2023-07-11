@@ -1,4 +1,4 @@
-CorrHOD.utils module
+CorrHOD.utils
 ====================
 
 .. automodule:: CorrHOD.utils

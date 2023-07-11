@@ -1,4 +1,4 @@
-CorrHOD.cutsky module
+CorrHOD.cutsky
 =====================
 
 .. automodule:: CorrHOD.cutsky
