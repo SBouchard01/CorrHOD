@@ -21,7 +21,6 @@ Please report bugs and ask questions by opening an issue in that repository.
    :caption: Getting Started
 
    installation
-   usage
 
 .. toctree::
    :maxdepth: 2

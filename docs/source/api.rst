@@ -2,7 +2,7 @@ CorrHOD
 =======
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
 
    CorrHOD.cubic
    CorrHOD.cutsky
