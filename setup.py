@@ -14,7 +14,7 @@ install_requires=[
     ]
 
 if os.getenv('READTHEDOCS'):
-    install_requires.append('abacusutils[docs]')
+    install_requires.append('abacusutils[all]')
     
 else:
     install_requires.append('abacusutils')
