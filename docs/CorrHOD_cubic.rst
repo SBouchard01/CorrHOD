@@ -23,6 +23,15 @@ The ``prepare_sim`` script is scaled for LRG galaxies. For computational reasons
 halo catalog to remove the light halos that will not be populated. However, the Bright Galaxy Survey 
 (BGS) galaxies has lower mass conditions than LRGs. Therefore, the filter needs to be changed.
 
+.. image:: images/Prepare_sim.png
+   :scale: 50 %
+   :align: center
+   :alt: prepare_sim halos distribution
+   :figclass: align-center
+
+   The Halo mass distribution for different filters (blue for the halo catalog, yellow for BGS
+   and green for LRGs)
+
 The ``prepare_sim.sh`` file in the ``scripts`` folder is the script used to prepare the BGS simulations.
 
 .. warning::
