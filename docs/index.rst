@@ -3,8 +3,6 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-..include:: ../examples
-
 CorrHOD
 ===================================
 
@@ -45,7 +43,7 @@ Please report bugs and ask questions by opening an issue in that repository.
    :maxdepth: 2
    :caption: Tutorials
 
-   examples
+   ..include:: ../examples
 
 .. toctree::
    :maxdepth: 2
