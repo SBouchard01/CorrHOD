@@ -14,7 +14,7 @@ install_requires=[
     ]
 
 if os.getenv('READTHEDOCS'):
-    install_requires.append('abacusutils[all]')
+    install_requires.append('abacusutils[docs] @ https://github.com/abacusorg/abacusutils')
     
 else:
     install_requires.append('abacusutils')
@@ -36,7 +36,9 @@ setup(
     install_requires = install_requires,
     extras_require = {
         "docs": [
-            
+            'sphinx >= 4.2',
+            'sphinx-book-theme >= 0.3',
+            'myst_nb >= 0.17.1',
         ]
     },
 )
