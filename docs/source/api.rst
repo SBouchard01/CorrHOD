@@ -1,7 +1,7 @@
-API
-===
+CorrHOD
+=======
 
-.. autosummary::
-   :toctree: generated
+.. toctree::
+   :maxdepth: 4
 
    CorrHOD
