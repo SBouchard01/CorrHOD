@@ -37,6 +37,7 @@ Please report bugs and ask questions by opening an issue in that repository.
    logging
    catalogs 
    weights
+   utils
 
 .. toctree::
    :maxdepth: 2
