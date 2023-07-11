@@ -17,7 +17,7 @@ python:
   version: 3.8
   install:
   - method: pip
-    path: .
+    path: CorrHOD
     extra_requirements:
       - docs
 
