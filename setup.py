@@ -14,7 +14,7 @@ install_requires=[
     ]
 
 if os.getenv('READTHEDOCS'):
-    install_requires.append('abacusutils[docs] @ https://github.com/abacusorg/abacusutils')
+    install_requires.append('abacusutils[docs] @ git+https://github.com/abacusorg/abacusutils')
     
 else:
     install_requires.append('abacusutils')
