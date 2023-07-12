@@ -20,8 +20,15 @@ To follow the progress of the Correlation functions, the ``setup_logging()`` fro
 package can be used. However, this method will format every log message, and this might not be
 the desired behavior.
 
-Teherfore, the ``create_logger()`` method from the ``logging`` module can be used to initialize a
+Therefore, the ``create_logger()`` method from the ``logging`` module can be used to initialize a
 logger that will not be formatted by the ``setup_logging()`` method. 
+
+.. tip::
+   The ``create_logger()`` method is a wrapper around the ``logging.getLogger()`` method, and
+   will return the same logger if it has already been initialized.
+
+   It is also possible to get the same formatting as the ``setup_logging()`` method by setting the
+   ``propagate`` attribute of the logger to ``True``.
 
 Recommended logger initialization
 ---------------------------------
