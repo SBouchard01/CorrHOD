@@ -14,10 +14,6 @@ Strict requirements are :
 * [`mockfactory`](https://github.com/cosmodesi/mockfactory)
 * [`pycorr`](https://github.com/cosmodesi/pycorr/tree/main)
 
-*Note : The densitysplit package is not yet available on pip, so you will have to install it manually first. I recommend using the `openmp` branch, which is MPI-compatible and faster than the master branch.*
-
-*Also, the cosmoprimo, mockfactory and pycorr packages might not be available on pip either. See their documentations on how to install them.*
-
 ## Installation
 
 ### Pip install
