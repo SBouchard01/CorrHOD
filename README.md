@@ -56,9 +56,12 @@ Examples can be found under the `examples` directory.
   - [ ] Implement `run_all` function
 - [x] Make the package pip-installable
 - [x] Create documentation
+  - [ ] Change style 
+  - [ ] Add link to example notebooks
+  - [ ] Find an icon ?
 - [x] Create examples
   - [x] Modify cubic example
   - [x] Create cutsky example notebook
   - [ ] Run the notebooks to have the outputs
-- [ ] Finish the README
-- [ ] Add a note about coordinates used in cutsky class (and the densitysplit functions)
+- [x] Finish the README
+- [x] Add a note about coordinates used in cutsky class (and the densitysplit functions)
