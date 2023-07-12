@@ -44,6 +44,7 @@ How to use the class
 --------------------
 
 ::
+   
    from CorrHOD import CorrHOD_cutsky
 
 .. warning::
@@ -88,7 +89,7 @@ not computed before calling the correlation functions.
    In the ``get_tracer_weights()`` method, the weights are computed for the data and randoms and
    splitted in the quantiles to their respectives galaxies (the same way as the densitysplit).
 
-   *This is a temporary fix and does not impact a lot the results, compared with setting all the
+   *This is a temporary fix and doesn't impact a lot the results, compared with setting all the
    weights to 1.*
 
 The number density functions can also be computed within the class, which can allow for some 
