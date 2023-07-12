@@ -251,6 +251,9 @@ as the entire code only takes a few lines::
 
    Object.run_all() # Several arguments can be passed to the method, see the API for more details
 
+.. tip::
+   The ``run_all()`` method times every step of the execution. These times are displayed in the logs, 
+   but are also stored in a times_dict object, that can be accessed.
 
 API
 ---

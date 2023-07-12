@@ -43,11 +43,11 @@ Please report bugs and ask questions by opening an issue in that repository.
    :maxdepth: 2
    :caption: Tutorials
 
-   .. warning::
-      These notebooks were computed on a LRG-like halo simulation (see :doc:`CorrHOD_cubic` for details).
-      This means that the results are not physically meaningful, but they can be used to understand how to use the code.
-
    ..include:: ../examples
+
+.. warning::
+   These notebooks were computed on a LRG-like halo simulation (see :doc:`CorrHOD_cubic` for details).
+   This means that the results are not physically meaningful, but they can be used to understand how to use the code.
 
 .. toctree::
    :maxdepth: 2
