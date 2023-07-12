@@ -1,9 +1,11 @@
 # CorrHOD
-A code that populates dark matter halos and computes correlation functions
+[![Documentation Status](https://readthedocs.org/projects/corrhod/badge/?version=latest)](https://corrhod.readthedocs.io/en/latest/?badge=latest)
 
+CorrHOD is a python3 package for modeling the clustering of galaxies in the 
+[AbacusSummit](https://abacussummit.readthedocs.io>) Dark Matter simulations. 
 
 ## Documentation
-(Coming later)
+The documentation can be found at https://corrhod.readthedocs.io
 
 ## Requirements
 Strict requirements are : 
@@ -37,6 +39,8 @@ You can also install it in developer mode, so that any changes you make to the c
 $ python setup.py develop --user
 ```
 
+For more information, see https://corrhod.readthedocs.io/en/latest/installation.html
+
 ## Examples
 Examples can be found under the `examples` directory.
 
@@ -49,9 +53,10 @@ Examples can be found under the `examples` directory.
   - [ ] Implement `read_cutsky` function (name to be changed)
   - [ ] Implement `run_all` function
 - [x] Make the package pip-installable
-- [ ] Create documentation
-- [ ] Create examples
-  - [ ] Modify cubic example
-  - [ ] Create cutsky example notebook
+- [x] Create documentation
+- [x] Create examples
+  - [x] Modify cubic example
+  - [x] Create cutsky example notebook
+  - [ ] Run the notebooks to have the outputs
 - [ ] Finish the README
 - [ ] Add a note about coordinates used in cutsky class (and the densitysplit functions)
