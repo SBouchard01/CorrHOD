@@ -53,10 +53,6 @@ class CorrHOD_cubic():
         cosmo : int, optional
             Index of the cosmology to use. This index is used to load the cosmology from the AbacusSummit object. Defaults to 0.
             See the documentation of AbacusSummit for more details.
-            
-        phase : int, optional
-            Index of the phase to use. This index is used to load the cosmology from the AbacusSummit object. Defaults to 0.
-            The phase describes the initial conditions of the simulation. See the documentation of AbacusSummit for more details.
 
         Raises
         ------
