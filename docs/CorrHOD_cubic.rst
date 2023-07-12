@@ -208,14 +208,14 @@ Once this method called, a new key is added to the ``Object.CF`` dictionnary, wi
 
 .. warning::
    For the method to work, all the correlation functions must have been computed (and with the same separation bins).
-   This means the 2PCF, and the auto and cross correlation functions for **each quantile !**.
+   This means the 2PCF, and the auto and cross correlation functions for **each quantile !**
 
 
 Parallelism
 ~~~~~~~~~~~
 
 The ``CorrHOD_cubic`` class supports multiprocessing and MPI, and will transfer the ``nthreads``, 
-communcator and rank to the functions that support it, if they are provided.
+communicator and rank to the functions that support it, if they are provided.
 See the `API`_ section for more details.
 
 Saving the results
