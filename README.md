@@ -4,9 +4,6 @@
 CorrHOD is a python3 package for modeling the clustering of galaxies in the 
 [AbacusSummit](https://abacussummit.readthedocs.io>) Dark Matter simulations. 
 
-## Documentation
-The documentation can be found at https://corrhod.readthedocs.io
-
 ## Requirements
 Strict requirements are : 
 * `numpy`
@@ -40,6 +37,11 @@ $ python setup.py develop --user
 ```
 
 For more information, see https://corrhod.readthedocs.io/en/latest/installation.html
+
+
+## Documentation
+The documentation can be found at https://corrhod.readthedocs.io
+
 
 ## Examples
 Examples can be found under the `examples` directory.
