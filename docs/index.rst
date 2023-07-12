@@ -6,7 +6,7 @@
 CorrHOD
 ===================================
 
-CorrHOD is a package for modeling the clustering of galaxies in the 
+CorrHOD is a python3 package for modeling the clustering of galaxies in the 
 `AbacusSummit <https://abacussummit.readthedocs.io>`_ Dark Matter simulations. 
 It is based on the HOD model of `Zheng et al. 2007 <https://arxiv.org/abs/astro-ph/0703457>`_ 
 and the `AbacusHOD <https://abacusutils.readthedocs.io/en/latest/hod.html>`_ package from 

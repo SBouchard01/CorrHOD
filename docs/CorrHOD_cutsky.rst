@@ -68,6 +68,18 @@ please refer to the documentation of that class for the first steps of the analy
    Object.get_tracer_positions()
    Object.get_tracer_weights()
 
+.. note::
+   There are actually three positionnal arrays created in the class : ``data_positions`` (resp. 
+   ``randoms_positions``) are the positions in sky coordinates (Ra, Dec, Comoving distance), 
+   ``data_sky`` (resp. ``randoms_sky``) are the positions in sky coordinates (Ra, Dec, Redshift),
+   and ``data_cartesian`` (resp. ``randoms_cartesian``) are the positions in cartesian coordinates 
+   (x, y, z).
+
+   **Be careful when calling the positions in this class !**
+
+.. tip::
+   Also, the ``get_tracer_positions()`` method has a ``return_cartesian`` parameter, that
+   allows to return the cartesian positions instead of the sky positions. This can be useful.
 
 Weights and number density
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
