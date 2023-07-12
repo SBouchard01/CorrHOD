@@ -143,13 +143,22 @@ Correlations functions to take too much time to compute.
 While CorrHOD supports multiprocessing and MPI (see the `Parallelism`_ section), downsampling the catalog
 can be a good way to reduce the computation time, without loosing too much information.
 
-The :func:`.downsample_data` method can be used to uniformly downsample the catalog ::
+The :py:func:`~CorrHOD.CorrHOD_cubic.downsample_data` method can be used to uniformly downsample the catalog ::
 
    new_nbar = 1e-3 # New number density of galaxies
    Object.downsample_data(new_n=new_n) 
 
+.. warning::
+   Any downsampling will cause a loss of information, and should be used with caution.
+   For example, the `DensitySplit`_ theory is based on the local density of galaxies,
+   that will be affected by the downsampling.
 
-Paralellism
+
+DensitySplit
+~~~~~~~~~~~~
+
+
+Parallelism
 ~~~~~~~~~~~
 
 
