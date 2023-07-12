@@ -18,7 +18,7 @@ To do so, you need to follow the instructions in the
 The BGS filter
 ~~~~~~~~~~~~~~
 
-The ``prepare_sim`` script is scaled for LRG galaxies. For computational reasons, a filter [#]_
+The ``prepare_sim`` script is scaled for LRG galaxies. For computational reasons, a filter[#]_
 is applied to the halo catalog to remove the light halos that will not be populated. 
 However, the Bright Galaxy Survey (BGS) galaxies has lower mass conditions than LRGs. 
 Therefore, the filter needs to be changed.
@@ -134,6 +134,18 @@ This will also apply the Redshift Space Distortion (RSD) to the positions.
    will be used for all the analysis.
 
 
+DensitySplit[#]_
+~~~~~~~~~~~~
+
+The ``compute_densitysplit()`` method applies the ``densitysplit`` package to the catalog,
+and separates the galaxies in the catalog in quantiles of local density::
+
+   quantiles, density = Object.compute_densitysplit(return_density=True) # If return_density is False, only the quantiles are returned
+
+.. note::
+   The quantiles also can be accessed with ``Object.quantiles``.
+
+
 Downsampling the catalog
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -143,7 +155,7 @@ Correlations functions to take too much time to compute.
 While CorrHOD supports multiprocessing and MPI (see the `Parallelism`_ section), downsampling the catalog
 can be a good way to reduce the computation time, without loosing too much information.
 
-The :py:func:`~CorrHOD.CorrHOD_cubic.downsample_data` method can be used to uniformly downsample the catalog ::
+The ``downsample_data()`` method can be used to uniformly downsample the catalog ::
 
    new_nbar = 1e-3 # New number density of galaxies
    Object.downsample_data(new_n=new_n) 
@@ -154,12 +166,85 @@ The :py:func:`~CorrHOD.CorrHOD_cubic.downsample_data` method can be used to unif
    that will be affected by the downsampling.
 
 
-DensitySplit
-~~~~~~~~~~~~
+Computing the correlation functions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Three methods are available to compute the correlation functions:
+``compute_2pcf()``, ``compute_auto_corr()`` and ``compute_cross_corr()``.
+Their use and parameters are detailled in the `API`_ section.
+
+Their results are stored in two dictionnaires inside the class :
+
+* ``Object.xi`` stores the ``pycorr.TwoPointCorrelationFunction`` objects
+* ``Object.CF`` stores the multipoles of the correlation functions, and assumes that all 
+   the correlation functions are computed with the same separation bins.
+
+.. warning::
+   This last point is important, as the separation bins are stored only once in this dictionnary.
+
+The two dictionnaires have the same structure :
+
+   los = 'z' # Line of sight on which the RSD have been applied
+   Object.CF[los]['2PCF'] # gets the poles of the 2PCF
+   Object.CF['Cross']['DS0'] # For quantile 0 ...
+
+.. tip::
+   The *line of sight* key is here so that several lines of sight can be computed in the same CorrHOD object.
+   This allows for the `Averaging the correlation functions`_ part.
+
+
+Averaging the correlation functions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If several lines of sight have been computed in the same CorrHOD object, the ``average_CF()`` method can be used
+to average the poles of the correlation functions.
+
+.. tip::
+   The method has an ``average_on`` parameter that can be used to average only on a subset of the lines of sight.
+
+This allows for a reduction of the noise in the correlation functions, and a better estimation of the covariance matrix.
+
+Once this method called, a new key is added to the ``Object.CF`` dictionnary, with the key ``'average'``.
+
+.. warning:: test
+   For the method to work, all the correlation functions must have been computed (and with the same separation bins).
+   This means the 2PCF, and the auto and cross correlation functions for **each quantile !**.
 
 
 Parallelism
 ~~~~~~~~~~~
+
+The ``CorrHOD_cubic`` class supports multiprocessing and MPI, and will transfer the ``nthreads``, 
+communcator and rank to the functions that support it, if they are provided.
+See the `API`_ section for more details.
+
+Saving the results
+~~~~~~~~~~~~~~~~~~
+
+The ``save()`` method can be used to save the selected results in numpy files.
+The arguments of the method can be found in the `API`_ section.
+
+The saved results are saved in the following structure::
+
+   Folder/
+   ├── ds/
+   │   ├── density/        (Density)
+   │   ├── quantiles/      (Quantiles)
+   │   ├── gaussian/       (Auto and cross correlation functions)
+   ├── hod/                (HOD parameters)
+   ├── tpcf/               (2PCF)
+   ├── xi/                 (Correlation functions)
+
+The ``run_all`` method
+~~~~~~~~~~~~~~~~~~~~~~
+
+This method is a shortcut to run all the analysis in one go. 
+It is not recommended to use it, as it will not allow for a good control of the analysis, and 
+requires a good understanding of the class to be used properly.
+
+However, if you know what you are doing, it makes for a very powerful tool to run the analysis,
+as the entire code only takes a few lines.
+
 
 
 
@@ -175,4 +260,5 @@ API
 
 .. rubric:: Footnotes
 
-.. [#] see `Yuan et Al. (2021) <https://arxiv.org/pdf/2110.11412.pdf>`_ eq.13 for more details.
+.. [#] See `Yuan et Al. (2021) <https://arxiv.org/pdf/2110.11412.pdf>`_ eq.13 for more details.
+.. [#] See `Paillas et al. (2022) <https://arxiv.org/pdf/2209.04310.pdf>`_ for more details.
