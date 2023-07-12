@@ -134,7 +134,7 @@ This will also apply the Redshift Space Distortion (RSD) to the positions.
    will be used for all the analysis.
 
 
-DensitySplit[#]_
+DensitySplit [#]_
 ~~~~~~~~~~~~
 
 The ``compute_densitysplit()`` method applies the ``densitysplit`` package to the catalog,
