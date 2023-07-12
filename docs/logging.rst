@@ -24,11 +24,11 @@ Teherfore, the ``create_logger()`` method from the ``logging`` module can be use
 logger that will not be formatted by the ``setup_logging()`` method. 
 
 Recommended logger initialization
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+---------------------------------
 
 ::
 
-   from CorrHOD.logging import create_logger
+   from CorrHOD import create_logger
    from mockfactory import setup_logging
 
    # Get a logger object
