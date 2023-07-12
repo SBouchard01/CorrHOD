@@ -206,7 +206,7 @@ This allows for a reduction of the noise in the correlation functions, and a bet
 
 Once this method called, a new key is added to the ``Object.CF`` dictionnary, with the key ``'average'``.
 
-.. warning:: test
+.. warning::
    For the method to work, all the correlation functions must have been computed (and with the same separation bins).
    This means the 2PCF, and the auto and cross correlation functions for **each quantile !**.
 
@@ -243,9 +243,13 @@ It is not recommended to use it, as it will not allow for a good control of the 
 requires a good understanding of the class to be used properly.
 
 However, if you know what you are doing, it makes for a very powerful tool to run the analysis,
-as the entire code only takes a few lines.
+as the entire code only takes a few lines::
 
+   from CorrHOD import CorrHOD_cubic
 
+   Object = CorrHOD_cubic(config_file, HOD_dict)
+
+   Object.run_all() # Several arguments can be passed to the method, see the API for more details
 
 
 API
