@@ -18,7 +18,7 @@ To do so, you need to follow the instructions in the
 The BGS filter
 ~~~~~~~~~~~~~~
 
-The ``prepare_sim`` script is scaled for LRG galaxies. For computational reasons, a filter[#]_
+The ``prepare_sim`` script is scaled for LRG galaxies. For computational reasons, a filter [#]_
 is applied to the halo catalog to remove the light halos that will not be populated. 
 However, the Bright Galaxy Survey (BGS) galaxies has lower mass conditions than LRGs. 
 Therefore, the filter needs to be changed.
