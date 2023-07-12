@@ -187,8 +187,10 @@ def catalog_cuts(data,
     zcut = (z > zmin) & (z < zmax)
     
     # Get the status mask
-    status = data['STATUS']
-    status_cut = status & status_mask == status_mask
+    status_cut = np.full(len(data), True, dtype=bool) # Mask that keeps all the galaxies
+    if 'STATUS' in data.columns:
+        status = data['STATUS']
+        status_cut = status & status_mask == status_mask
     
     # Get the magnitude mask
     mag_cut = np.full(len(data), True, dtype=bool) # Mask that keeps all the galaxies
