@@ -40,6 +40,7 @@ setup(
             'sphinx >= 4.2',
             'sphinx-book-theme >= 0.3',
             'myst_nb >= 0.17.1',
+            'sphinx-collections',
         ]
     },
 )

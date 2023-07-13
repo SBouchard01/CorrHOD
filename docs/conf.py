@@ -57,6 +57,14 @@ autodoc_preserve_defaults = True # Keep the default values of the parameters ins
 autoclass_content = 'both' # Include both the class docstring and the __init__ docstring in the documentation
 autodoc_member_order = 'bysource' # Order the members by the order in the source code
 
+# Add extra folders to the path
+collections = {
+   'my_files': {
+      'driver': 'copy_folder',
+      'source': '../examples/'
+   }
+}
+
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
