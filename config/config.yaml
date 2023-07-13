@@ -6,7 +6,7 @@ sim_params:
     sim_name: 'AbacusSummit_base_c000_ph000'                                 # which simulation 
     sim_dir: /global/cfs/cdirs/desi/cosmosim/Abacus
     output_dir: './'                                                         # where to output galaxy mocks
-    subsample_dir: '/global/homes/s/sbouchar/Abacus_HOD/Tests/'                                            # where to output subsample data
+    subsample_dir: '/pscratch/sd/s/sbouchar/Abacus_dark_matter_halos/'       # where to output subsample data
     z_mock: 0.2                                                              # which redshift slice
     cleaned_halos: True                                                      # load cleaned halos?
 prepare_sim:
@@ -59,6 +59,6 @@ fit_params:
 # number density of the sample you want to replicate
 data_params:
     tracer_density_mean:
-        LRG: 0.001 #0.00045 # 3.0 # (mpc/h)^-3
+        LRG: 0.009 #0.00045 # 3.0 # (mpc/h)^-3
     tracer_density_std:
         LRG: 3.0e-5 # (mpc/h)^-3
