@@ -40,7 +40,7 @@ Please report bugs and ask questions by opening an issue in that repository.
    utils
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Tutorials
 
    examples/CorrHOD_cubic
