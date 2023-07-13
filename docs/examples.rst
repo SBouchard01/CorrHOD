@@ -1,2 +1,2 @@
-.. include:: ../examples/CorrHOD_cubic.ipynb
-.. include:: ../examples/CorrHOD_cutsky.ipynb
+.. include:: ../examples/CorrHOD_cubic
+.. include:: ../examples/CorrHOD_cutsky
