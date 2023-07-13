@@ -35,6 +35,7 @@ extensions = [
     'sphinx.ext.napoleon', # For documenting the parameters of the functions
     'sphinx.ext.intersphinx', # For linking to other packages' documentation
     'sphinx.ext.viewcode', # For linking to the source code
+    'sphinxcontrib.collections', # For including the examples
 ]
 
 # Add any paths that contain templates here, relative to this directory.
