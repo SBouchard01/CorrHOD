@@ -35,7 +35,6 @@ extensions = [
     'sphinx.ext.napoleon', # For documenting the parameters of the functions
     'sphinx.ext.intersphinx', # For linking to other packages' documentation
     'sphinx.ext.viewcode', # For linking to the source code
-    'sphinxcontrib.collections', # For including the examples
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -57,14 +56,6 @@ napoleon_numpy_docstring = True
 autodoc_preserve_defaults = True # Keep the default values of the parameters instead of replacing them with their values
 autoclass_content = 'both' # Include both the class docstring and the __init__ docstring in the documentation
 autodoc_member_order = 'bysource' # Order the members by the order in the source code
-
-# Add extra folders to the path
-collections = {
-   'examples': {
-      'driver': 'copy_folder',
-      'source': '../examples/'
-   }
-}
 
 # -- Options for HTML output -------------------------------------------------
 
