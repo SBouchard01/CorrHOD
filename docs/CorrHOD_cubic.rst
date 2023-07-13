@@ -254,6 +254,22 @@ as the entire code only takes a few lines::
 .. tip::
    The ``run_all()`` method times every step of the execution. These times are displayed in the logs, 
    but are also stored in a times_dict object, that can be accessed.
+   It has the following keys : 
+
+   * 'initialize_halo' : Time to initialize the halos catalog
+   * 'run_all' : Time to run the entire analysis
+   * 'x', 'y' or 'z' : The chosen line of sight
+     
+     * 'run_los' : Time to run the entire line of sight
+     * 'compute_DensitySplit' : Time to compute the density split
+     * 'compute_2pcf' : Time to compute the 2PCF
+     * 'compute_auto_corr' : Time to compute the auto correlation functions
+
+       * 'DS0', 'DS1', ... : The quantiles
+     
+     * 'compute_cross_corr' : Time to compute the cross correlation functions
+
+       * 'DS0', 'DS1', ... : The quantiles
 
 API
 ---
