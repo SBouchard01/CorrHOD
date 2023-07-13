@@ -35,7 +35,14 @@ extensions = [
     'sphinx.ext.napoleon', # For documenting the parameters of the functions
     'sphinx.ext.intersphinx', # For linking to other packages' documentation
     'sphinx.ext.viewcode', # For linking to the source code
+    'myst_nb', # For including jupyter notebooks
 ]
+
+myst_enable_extensions = ["dollarmath"]
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.ipynb': 'myst-nb',
+}
 
 # Add any paths that contain templates here, relative to this directory.
 # templates_path = ['_templates']
