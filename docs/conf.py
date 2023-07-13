@@ -59,7 +59,7 @@ autodoc_member_order = 'bysource' # Order the members by the order in the source
 
 # Add extra folders to the path
 collections = {
-   'my_files': {
+   'examples': {
       'driver': 'copy_folder',
       'source': '../examples/'
    }
