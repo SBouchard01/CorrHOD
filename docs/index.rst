@@ -43,7 +43,8 @@ Please report bugs and ask questions by opening an issue in that repository.
    :maxdepth: 2
    :caption: Tutorials
 
-   /examples
+   examples/CorrHOD_cubic
+   examples/CorrHOD_cutsky
 
 .. warning::
    These notebooks were computed on a LRG-like halo simulation (see :doc:`CorrHOD_cubic` for details).
