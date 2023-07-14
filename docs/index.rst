@@ -47,8 +47,10 @@ Please report bugs and ask questions by opening an issue in that repository.
    examples/CorrHOD_cutsky
 
 .. warning::
-   These notebooks were computed on a LRG-like halo simulation (see :doc:`CorrHOD_cubic` for details).
-   This means that the results are not physically meaningful, but they can be used to understand how to use the code.
+   These notebooks were computed on a LRG-like halo simulation 
+   (see `CorrHOD_cubic <https://corrhod.readthedocs.io/en/latest/CorrHOD_cubic.html#the-bgs-filter>`_ 
+   for details). This means that the results are not physically meaningful, 
+   but they can be used to understand how to use the code.
 
 .. toctree::
    :maxdepth: 2
