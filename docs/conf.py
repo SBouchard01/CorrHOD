@@ -35,6 +35,7 @@ extensions = [
     'sphinx.ext.napoleon', # For documenting the parameters of the functions
     'sphinx.ext.intersphinx', # For linking to other packages' documentation
     'sphinx.ext.viewcode', # For linking to the source code
+    'sphinx.ext.linkcode', # For linking to external codes
     'sphinx.ext.autosectionlabel', # For automatically labelling the sections
     'myst_nb', # For including jupyter notebooks
 ]
