@@ -78,6 +78,8 @@ nb_execution_mode = 'off'
 html_theme = 'sphinx_book_theme'
 
 html_title = 'CorrHOD'
+html_logo = 'images/CorrHOD_logo.svg'
+html_favicon = 'images/CorrHOD_favicon.png'
 html_show_sourcelink = False
 html_theme_options = {
     "repository_url": "https://github.com/SBouchard01/CorrHOD",
@@ -87,6 +89,10 @@ html_theme_options = {
     "use_repository_button": True,
     "use_download_button": True,
     "use_fullscreen_button": False,
+    "logo": {
+      "image_light": "images/CorrHOD_logo.svg",
+      "image_dark": "images/CorrHOD_logo_dark.svg",
+    },
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
