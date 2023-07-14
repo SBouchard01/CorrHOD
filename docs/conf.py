@@ -66,7 +66,7 @@ autodoc_preserve_defaults = True # Keep the default values of the parameters ins
 autoclass_content = 'both' # Include both the class docstring and the __init__ docstring in the documentation
 autodoc_member_order = 'bysource' # Order the members by the order in the source code
 
-nb_execution_mode = 'off'
+nb_execution_mode = 'off' # Do not execute the notebooks when building the documentation
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -80,7 +80,7 @@ html_theme = 'sphinx_book_theme'
 html_title = 'CorrHOD'
 html_logo = 'images/CorrHOD_logo.svg'
 html_favicon = 'images/CorrHOD_favicon.png'
-html_show_sourcelink = False
+html_show_sourcelink = False # Remove the "view source" link
 html_theme_options = {
     "repository_url": "https://github.com/SBouchard01/CorrHOD",
     "repository_branch": "main",
@@ -91,7 +91,7 @@ html_theme_options = {
     "use_fullscreen_button": False,
     "logo": {
       "image_light": "images/CorrHOD_logo.svg",
-      "image_dark": "images/CorrHOD_logo_dark.svg",
+      "image_dark": "images/CorrHOD_logo_dark.svg", # Change logo when dark mode is activated
     },
 }
 
@@ -99,3 +99,12 @@ html_theme_options = {
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 # html_static_path = ['_static']
+
+
+def linkcode_resolve(domain, info):
+    if domain != 'py':
+        return None
+    if not info['module']:
+        return None
+    filename = info['module'].replace('.', '/')
+    return f"https://github.com/SBouchard01/CorrHOD/blob/main/{filename}.py"
