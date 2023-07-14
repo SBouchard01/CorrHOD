@@ -73,8 +73,8 @@ nb_execution_mode = 'off'
 # a list of builtin themes.
 #
 # html_theme = 'alabaster'
-html_theme = 'sphinx_rtd_theme' # For readthedocs.io
-# html_theme = 'sphinx_book_theme'
+# html_theme = 'sphinx_rtd_theme' # For readthedocs.io
+html_theme = 'sphinx_book_theme'
 
 html_show_sourcelink = False
 html_theme_options = {
