@@ -12,7 +12,7 @@ from pathlib import Path
 abs_path = Path(__file__).parent # Absolute path to the current file
 module_path = (abs_path / '../').resolve(strict=True)
 path2config = (abs_path / Path('../config/config.yaml')).resolve(strict=True) # Get the path of the config file (resolve for symlinks)
-path = (abs_path / Path('../data')) # Path to save the results
+path = (abs_path / Path('../CorrHOD_data')) # Path to save the results
 
 sys.path.append(str(module_path)+'/') # Add the parent directory to the PATH
 
@@ -81,10 +81,13 @@ nquantiles=10
 smooth_radius = 10
 cellsize = 5
 
+new_n = 1e-4
+
 #%% Run CorrHOD
 Object = CorrHOD_cubic(HOD_params, path2config)
 
 Object.run_all(los_to_compute=los,
+               downsample_to=new_n,
                smooth_radius=smooth_radius,
                cellsize=cellsize,
                mpicomm=comm,
